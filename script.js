@@ -1,9 +1,11 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js';
 import {
   getAuth,
+  getRedirectResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js';
 import {
@@ -781,16 +783,51 @@ navButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveView(button.dataset.view));
 });
 
+function googleSignInErrorMessage(error) {
+  const messages = {
+    'auth/popup-closed-by-user': '登入視窗已關閉，尚未登入。',
+    'auth/popup-blocked': '瀏覽器封鎖登入視窗，正在改用重新導向登入。',
+    'auth/unauthorized-domain': '這個網站網址尚未加入 Firebase 授權網域。',
+    'auth/operation-not-allowed': 'Firebase 專案尚未啟用 Google 登入。',
+    'auth/web-storage-unsupported': '此瀏覽器限制了登入所需的網站儲存功能，請改用一般瀏覽模式。',
+    'auth/redirect-cancelled-by-user': 'Google 登入已取消，尚未登入。',
+    'auth/redirect-operation-pending': '登入流程仍在進行，請稍候。',
+  };
+  return messages[error.code] || '登入失敗，請稍後重試或查看瀏覽器提示。';
+}
+
+function isMobileSignInEnvironment() {
+  const userAgent = navigator.userAgent || '';
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+  const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return isMobile || isIPadOS;
+}
+
 authButton.addEventListener('click', async () => {
   authButton.disabled = true;
-  authMessage.textContent = '正在開啟 Google 登入…';
+  authMessage.textContent = isMobileSignInEnvironment()
+    ? '正在前往 Google 登入…'
+    : '正在開啟 Google 登入…';
   try {
+    if (isMobileSignInEnvironment()) {
+      await signInWithRedirect(auth, googleProvider);
+      return;
+    }
     await signInWithPopup(auth, googleProvider);
   } catch (error) {
     console.error('Google 登入未完成：', error.code || error.message);
-    authMessage.textContent = error.code === 'auth/popup-closed-by-user'
-      ? '登入視窗已關閉，尚未登入。'
-      : '登入失敗，請稍後重試或查看瀏覽器提示。';
+    if (error.code === 'auth/popup-blocked') {
+      authMessage.textContent = '彈出視窗被封鎖，正在改用重新導向登入…';
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      } catch (redirectError) {
+        console.error('Google 重新導向登入未完成：', redirectError.code || redirectError.message);
+        authMessage.textContent = googleSignInErrorMessage(redirectError);
+      }
+    } else {
+      authMessage.textContent = googleSignInErrorMessage(error);
+    }
     authButton.disabled = false;
   }
 });
@@ -982,10 +1019,22 @@ eventEditDialog.addEventListener('click', (event) => { if (event.target === even
 
 showToday();
 setActiveView('today');
-onAuthStateChanged(auth, (user) => {
-  if (user) startUserData(user);
-  else setSignedOutView();
-}, (error) => {
-  console.error('登入狀態讀取失敗：', error.code || error.message);
-  setSignedOutView('無法確認登入狀態，請重新整理或再試一次。');
-});
+let redirectErrorMessage = '';
+getRedirectResult(auth)
+  .catch((error) => {
+    console.error('Google 重新導向登入未完成：', error.code || error.message);
+    redirectErrorMessage = googleSignInErrorMessage(error);
+  })
+  .finally(() => {
+    onAuthStateChanged(auth, (user) => {
+      if (user) startUserData(user);
+      else {
+        setSignedOutView(redirectErrorMessage || undefined);
+        redirectErrorMessage = '';
+      }
+    }, (error) => {
+      console.error('登入狀態讀取失敗：', error.code || error.message);
+      setSignedOutView(redirectErrorMessage || '無法確認登入狀態，請重新整理或再試一次。');
+      redirectErrorMessage = '';
+    });
+  });
