@@ -1,0 +1,12 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 每位登入者只能讀寫 users/{自己的 UID} 底下的文件。
+    // 未登入者與其他帳號都會被拒絕。
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+  }
+}

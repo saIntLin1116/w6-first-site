@@ -3,22 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f7f4">
+  <meta name="theme-color" content="#16202b">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
+  <link rel="stylesheet" href="style.css?v=ui-20261122-7">
+  <script type="module" src="script.js"></script>
 </head>
 <body>
   <main class="page-shell">
     <header class="topbar">
       <a class="brand" href="#top" aria-label="日常誌首頁"><span class="brand-mark" aria-hidden="true">日</span><span>日常誌</span></a>
-      <span class="topbar-note">把每一天，安排得剛剛好</span>
+      <div class="account-area">
+        <span class="auth-message" id="auth-message" role="status" aria-live="polite">正在連線…</span>
+        <span class="user-name" id="user-name"></span>
+        <button class="auth-button" id="auth-button" type="button" disabled>使用 Google 登入</button>
+        <button class="auth-button is-secondary" id="sign-out-button" type="button" hidden>登出</button>
+      </div>
     </header>
 
     <section class="intro" id="top" aria-labelledby="page-title">
       <div class="intro-copy">
-        <p class="eyebrow">MY DAILY PLANNER</p>
         <h1 id="page-title">今天，也一步一步來。</h1>
+        <p class="eyebrow">MY DAILY PLANNER</p>
         <p class="intro-subtitle">整理行程、完成待辦，留一點空間給自己。</p>
       </div>
       <div class="date-card">
@@ -27,46 +32,153 @@
       </div>
     </section>
 
-    <div class="dashboard-grid">
-      <section class="panel schedule-panel" aria-labelledby="schedule-title">
-        <div class="section-heading">
-          <div><p class="section-kicker">YOUR DAY</p><h2 id="schedule-title">今日行程</h2></div>
-          <span class="count-pill" id="schedule-count">3 個安排</span>
-        </div>
-        <ol class="schedule-list" id="schedule-list" aria-live="polite"></ol>
-      </section>
+    <section class="login-prompt" id="login-prompt" aria-live="polite">
+      <h2>先登入，安全查看你的行程與待辦</h2>
+      <p>登入後，這些資料只會連到你的帳號。</p>
+    </section>
 
-      <section class="panel tasks-panel" aria-labelledby="tasks-title">
-        <div class="section-heading">
-          <div><p class="section-kicker">SMALL STEPS</p><h2 id="tasks-title">今日待辦</h2></div>
-          <span class="count-pill" id="task-count">3 項任務</span>
-        </div>
-        <ul class="task-list" id="task-list" aria-live="polite"></ul>
-        <form class="task-form" id="task-form">
-          <label class="visually-hidden" for="task-name">待辦事項</label>
-          <input id="task-name" name="task-name" type="text" placeholder="新增一項待辦…" required>
-          <label class="visually-hidden" for="task-status">待辦狀態</label>
-          <select id="task-status" name="task-status"><option value="pending">待處理</option><option value="progress">進行中</option><option value="done">已完成</option></select>
-          <button type="submit" class="task-add-button" aria-label="新增待辦">＋</button>
-        </form>
-      </section>
+    <div class="app-content" id="dashboard-grid" hidden>
+      <nav class="main-nav" aria-label="主要頁面">
+        <button class="nav-button" type="button" data-view="inbox" aria-pressed="false">清單 <span id="inbox-nav-count">0</span></button>
+        <button class="nav-button is-active" type="button" data-view="today" aria-pressed="true">今日</button>
+        <button class="nav-button" type="button" data-view="calendar" aria-pressed="false">行事曆</button>
+      </nav>
 
-      <section class="panel form-panel" aria-labelledby="form-title">
-        <div class="section-heading form-heading">
-          <div><p class="section-kicker">MAKE A PLAN</p><h2 id="form-title">新增行程</h2></div>
-          <span class="sparkle" aria-hidden="true">✳</span>
+      <section class="workspace-view" id="today-view" aria-labelledby="today-view-title">
+        <div class="section-heading page-heading">
+          <div><p class="section-kicker">YOUR DAY</p><h2 id="today-view-title">今日要推進的事</h2></div>
+          <span class="count-pill" id="today-count">0 項任務</span>
         </div>
-        <form id="schedule-form">
-          <div class="form-row">
-            <div class="field"><label for="event-name">行程名稱</label><input id="event-name" name="event-name" type="text" placeholder="例如：和朋友喝咖啡" required></div>
-            <div class="field field-time"><label for="event-time">開始時間</label><input id="event-time" name="event-time" type="time" required></div>
+        <section class="spotlight-card" id="next-task-card" aria-live="polite" hidden>
+          <p class="spotlight-label">現在先做這一件</p>
+          <h3 id="next-task-name"></h3>
+          <p id="next-task-detail"></p>
+          <div class="spotlight-actions">
+            <button class="small-button is-primary" id="complete-next-task" type="button">標記完成</button>
+            <button class="small-button" id="return-next-task" type="button">移回清單</button>
           </div>
-          <div class="field"><label for="event-note">備註 <span class="optional">選填</span></label><input id="event-note" name="event-note" type="text" placeholder="地點或想記下的小提醒"></div>
-          <button class="submit-button" type="submit"><span aria-hidden="true">＋</span> 加入今日行程</button>
-          <p class="form-feedback" id="form-feedback" aria-live="polite"></p>
+        </section>
+        <p class="empty-message" id="today-empty" hidden>今天還沒有安排任務。可以從清單挑選一件開始。</p>
+        <h3 class="subsection-title" id="later-tasks-title" hidden>接下來</h3>
+        <ul class="task-list task-list-large" id="today-task-list" aria-live="polite"></ul>
+        <details class="completed-panel">
+          <summary>已完成紀錄 <span id="completed-count">0</span></summary>
+          <ul class="task-list task-list-large" id="completed-task-list" aria-live="polite"></ul>
+          <p class="empty-message" id="completed-empty" hidden>還沒有完成的任務。</p>
+        </details>
+      </section>
+
+      <section class="workspace-view" id="inbox-view" aria-labelledby="inbox-title" hidden>
+        <div class="section-heading page-heading">
+          <div><p class="section-kicker">TASK LIST</p><h2 id="inbox-title">清單</h2></div>
+          <span class="count-pill" id="inbox-count">0 項未安排</span>
+        </div>
+        <p class="section-description">先記下要做的事，之後再挑選哪些要放進今天。</p>
+        <form class="task-form inbox-form" id="task-form">
+          <label class="visually-hidden" for="task-name">任務名稱</label>
+          <input id="task-name" name="task-name" type="text" maxlength="120" placeholder="新增一項待辦…" required>
+          <button type="submit" class="task-add-button" aria-label="新增至清單">＋</button>
         </form>
+        <p class="form-feedback" id="task-feedback" aria-live="polite"></p>
+        <ul class="task-list task-list-large" id="inbox-task-list" aria-live="polite"></ul>
+        <p class="empty-message" id="inbox-empty" hidden>清單目前是空的。</p>
+      </section>
+
+      <section class="workspace-view" id="calendar-view" aria-labelledby="calendar-title" hidden>
+        <div class="section-heading page-heading">
+          <div><p class="section-kicker">CALENDAR</p><h2 id="calendar-title">行事曆</h2></div>
+          <time class="count-pill" id="calendar-date"></time>
+        </div>
+        <section class="panel calendar-panel" aria-label="月曆">
+          <div class="calendar-toolbar">
+            <button class="calendar-nav-button" id="calendar-prev" type="button" aria-label="上個月">‹</button>
+            <h3 id="calendar-month-title"></h3>
+            <button class="calendar-nav-button" id="calendar-next" type="button" aria-label="下個月">›</button>
+            <button class="small-button calendar-today-button" id="calendar-today" type="button">回到今天</button>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="月曆日期"></div>
+          <section class="selected-day" aria-labelledby="selected-date-title">
+            <div class="section-heading selected-day-heading">
+              <div><p class="section-kicker">DAILY SCHEDULE</p><h3 id="selected-date-title"></h3></div>
+              <span class="count-pill" id="schedule-count">0 個安排</span>
+            </div>
+            <ol class="schedule-list" id="schedule-list" aria-live="polite"></ol>
+            <p class="empty-message" id="schedule-empty" hidden>這天還沒有行程。</p>
+          </section>
+        </section>
+        <section class="panel form-panel" aria-labelledby="form-title">
+          <div class="section-heading form-heading">
+            <div><p class="section-kicker">MAKE A PLAN</p><h3 id="form-title">新增行程</h3></div>
+            <span class="sparkle" aria-hidden="true">✳</span>
+          </div>
+          <form id="schedule-form">
+            <div class="form-row">
+              <div class="field"><label for="event-name">行程名稱</label><input id="event-name" name="event-name" type="text" maxlength="120" placeholder="例如：和朋友喝咖啡" required></div>
+              <div class="field"><label for="event-date">日期</label><input id="event-date" name="event-date" type="date" required></div>
+            </div>
+            <div class="form-row category-row">
+              <div class="field"><label for="event-category">行程類別</label><input id="event-category" name="event-category" type="text" list="event-category-options" maxlength="40" value="其他" required><datalist id="event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
+              <div class="field category-color-field"><label for="event-category-color">類別顏色</label><input id="event-category-color" name="event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
+            </div>
+            <p class="field-hint">建立新類別時選擇顏色；之後使用同一類別會沿用此色。</p>
+            <label class="all-day-option" for="event-all-day"><input id="event-all-day" name="event-all-day" type="checkbox"> 全天行程</label>
+            <div class="form-row event-time-fields" id="event-time-fields">
+              <div class="field"><label for="event-start-time">開始時間</label><input id="event-start-time" name="event-start-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30" required></div>
+              <div class="field"><label for="event-end-time">結束時間</label><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30" required></div>
+              <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
+            </div>
+            <div class="field"><label for="event-note">備註 <span class="optional">選填</span></label><input id="event-note" name="event-note" type="text" maxlength="240" placeholder="地點或想記下的小提醒"></div>
+            <button class="submit-button" type="submit"><span aria-hidden="true">＋</span> 加入行程</button>
+            <p class="form-feedback" id="form-feedback" aria-live="polite"></p>
+          </form>
+        </section>
       </section>
     </div>
+
+    <dialog class="edit-dialog" id="task-edit-dialog" aria-labelledby="edit-dialog-title">
+      <form id="task-edit-form">
+        <div class="section-heading">
+          <div><p class="section-kicker">EDIT TASK</p><h2 id="edit-dialog-title">編輯任務</h2></div>
+          <button class="delete-button dialog-close" id="close-edit-dialog" type="button" aria-label="取消編輯">×</button>
+        </div>
+        <div class="field"><label for="edit-task-name">任務名稱</label><input id="edit-task-name" maxlength="120" required></div>
+        <div class="form-row">
+          <div class="field"><label for="edit-task-due">截止日期 <span class="optional">選填</span></label><input id="edit-task-due" type="date"></div>
+          <div class="field"><label for="edit-task-estimate">預估分鐘 <span class="optional">選填</span></label><input id="edit-task-estimate" type="number" min="1" max="1440" step="1" inputmode="numeric"></div>
+        </div>
+        <div class="field"><label for="edit-task-difficulty">主觀難度 <span class="optional">選填</span></label><select id="edit-task-difficulty"><option value="">未設定</option><option value="low">低</option><option value="medium">中</option><option value="high">高</option></select></div>
+        <div class="field"><label for="edit-task-note">備註 <span class="optional">選填</span></label><textarea id="edit-task-note" maxlength="500" rows="3"></textarea></div>
+        <p class="form-feedback" id="edit-feedback" aria-live="polite"></p>
+        <div class="dialog-actions"><button class="small-button" id="cancel-edit-task" type="button">取消</button><button class="small-button is-primary" type="submit">儲存變更</button></div>
+      </form>
+    </dialog>
+    <dialog class="edit-dialog" id="event-edit-dialog" aria-labelledby="edit-event-dialog-title">
+      <form id="event-edit-form">
+        <div class="section-heading">
+          <div><p class="section-kicker">EDIT EVENT</p><h2 id="edit-event-dialog-title">編輯行程</h2></div>
+          <button class="delete-button dialog-close" id="close-event-dialog" type="button" aria-label="取消編輯行程">×</button>
+        </div>
+        <div class="field"><label for="edit-event-name">行程名稱</label><input id="edit-event-name" maxlength="120" required></div>
+        <div class="field"><label for="edit-event-date">日期</label><input id="edit-event-date" type="date" required></div>
+        <div class="form-row category-row">
+          <div class="field"><label for="edit-event-category">行程類別</label><input id="edit-event-category" type="text" list="edit-event-category-options" maxlength="40" required><datalist id="edit-event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
+          <div class="field category-color-field"><label for="edit-event-category-color">類別顏色</label><input id="edit-event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
+        </div>
+        <p class="field-hint">新類別建立時可選顏色；已建立的類別會沿用原色。</p>
+        <label class="all-day-option" for="edit-event-all-day"><input id="edit-event-all-day" type="checkbox"> 全天行程</label>
+        <div class="form-row event-time-fields" id="edit-event-time-fields">
+          <div class="field"><label for="edit-event-start">開始時間</label><input id="edit-event-start" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30"></div>
+          <div class="field"><label for="edit-event-end">結束時間</label><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
+          <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
+        </div>
+        <div class="field"><label for="edit-event-note">備註 <span class="optional">選填</span></label><textarea id="edit-event-note" maxlength="240" rows="3"></textarea></div>
+        <p class="form-feedback" id="edit-event-feedback" aria-live="polite"></p>
+        <div class="dialog-actions"><button class="small-button" id="cancel-event-edit" type="button">取消</button><button class="small-button is-primary" type="submit">儲存變更</button></div>
+      </form>
+    </dialog>
     <footer class="footer"><span>留一點餘裕，讓好事發生。</span><span>DAILY PLANNER <span aria-hidden="true">✳</span></span></footer>
   </main>
 </body>
