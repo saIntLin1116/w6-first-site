@@ -206,39 +206,98 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .category-color-field input[type=color]:disabled{cursor:not-allowed;opacity:.7}
 .time-format-hint{grid-column:1/-1}
 
-/* Ink Black page background and category colors in the daily schedule */
-:root{color:#d1d1d6;background:#1c1c1f}
-body{color:#d1d1d6;background:linear-gradient(180deg,#1c1c1f 0%,#5e5f5c 100%);background-attachment:fixed}
-.topbar{border-bottom-color:#d1d1d633}
-.brand,.intro h1{color:#f5f5f7}
-.topbar-note,.intro-subtitle,.footer{color:#b9c2cb}
-.footer span span{color:#9eb8c8}
-.auth-message,.user-name{color:#c3adba}
-#today-view .section-heading h2,#inbox-view .section-heading h2{color:#e7e9ed}
-#today-view .section-kicker,#inbox-view .section-kicker{color:#c58fa3}
-#today-view .subsection-title{color:#d1d1d6}
-#today-view .completed-panel{border-top-color:#d1d1d633}
-#today-view .completed-panel summary,#today-view .completed-panel summary span{color:#c3cbd3}
-#today-empty,#inbox-empty,#completed-empty,#inbox-view .section-description{color:#b9c2cb}
-.schedule-item:not(:last-child)::after{border-left-color:var(--category-color,#d1d1d6)}
-.timeline-dot{border-color:var(--category-color,#7b445a);background:var(--category-color,#7b445a)}
-
-/* Requested palette refinements */
-:root{background:#1c1c1f}
-body{background:linear-gradient(180deg,#1c1c1f 0%,#5e5f5c 100%);background-attachment:fixed}
-.intro .eyebrow{color:#8b2323}
-.main-nav{border-color:#929491;background:#B0B2AF}
-.nav-button{color:#16202b}
-.nav-button.is-active{background:#114665;color:#fff}
-.calendar-panel{background:#B0B2AF;color:#16202b}
-.calendar-panel .section-kicker{color:#303b47}
-.calendar-toolbar h3,.selected-day-heading h3,.calendar-panel .schedule-copy h3{color:#16202b}
-.calendar-weekdays{color:#16202b}
-.calendar-day{border-color:#929491;background:#B0B2AF;color:#16202b}
-.calendar-day:hover{border-color:#747673;background:#c2c4c1}
-.calendar-day.is-outside-month{background:#525350;color:#c4c5c3}
-.calendar-day.is-selected{border-color:#114665;background:#114665;color:#fff}
-.selected-day{border-top-color:#858683}
-.calendar-panel .schedule-item time{color:#16202b}
-.calendar-panel .schedule-copy p,#schedule-empty{color:#303b47}
-.calendar-event-overflow{color:#16202b}
+/* Daily planner palette */
+:root{
+  --navy:#181D26;
+  --red:#B30715;
+  --rose:#C4979C;
+  --surface:#DED8DA;
+  --slate:#7B8DA6;
+  --green:var(--red);
+  --muted:var(--rose);
+  --line:var(--slate);
+  --paper:var(--surface);
+  color:var(--surface);
+  background:var(--navy);
+}
+body{min-height:100vh;color:var(--surface);background:var(--navy)}
+.topbar{border-bottom-color:#7B8DA666}
+.brand,.intro h1{color:var(--surface)}
+.brand-mark,.auth-button,.submit-button,.task-add-button,.small-button.is-primary,.row-action.is-primary{background:var(--red);color:var(--surface)}
+.brand-mark{border-radius:9px}
+.topbar-note,.intro-subtitle,.footer{color:var(--slate)}
+.footer span span{color:var(--rose)}
+.eyebrow,.section-kicker,.intro .eyebrow{color:var(--rose)}
+.auth-message,.user-name{color:var(--rose)}
+.date-card .date-label,.date-card time,label,.optional{color:var(--navy)}
+.date-card,.panel,.login-prompt,.spotlight-card,.task-item-rich,.edit-dialog,.main-nav{border-color:var(--slate);background:var(--surface);color:var(--navy)}
+.date-card time,.section-heading h2,.section-heading h3,.schedule-copy h3,.task-copy h3{color:var(--navy)}
+#today-view .section-heading h2,#inbox-view .section-heading h2,#calendar-view>.section-heading h2{color:var(--surface)}
+#today-view .section-kicker,#inbox-view .section-kicker,#calendar-view>.section-heading .section-kicker{color:var(--slate)}
+.spotlight-card{background:var(--surface);box-shadow:0 5px 20px #0003}
+.spotlight-label{color:var(--red)}
+#today-view .subsection-title{color:var(--rose)}
+.spotlight-card>p:not(.spotlight-label),.task-copy p,.schedule-copy p{color:var(--navy)}
+.count-pill,.nav-button span{background:var(--rose);color:var(--navy)}
+.main-nav{border-color:var(--slate);background:var(--surface)}
+.nav-button{color:var(--navy)}
+.nav-button:hover{background:var(--rose)}
+.nav-button.is-active{background:var(--red);color:var(--surface);box-shadow:0 2px 8px #B3071533}
+.nav-button.is-active span{background:#DED8DA33;color:var(--surface)}
+.task-item-rich{background:var(--surface);border-color:var(--slate)}
+.task-item-rich .task-copy h3{color:var(--navy)}
+.task-item-rich .task-copy p{color:var(--navy)}
+.completed-panel{border-top-color:#7B8DA666}
+.completed-panel summary,.completed-panel summary span{color:var(--surface)}
+#today-empty,#inbox-empty,#completed-empty,#schedule-empty,#inbox-view .section-description{color:var(--slate)}
+.status-done{background:var(--red);color:var(--surface)}
+.status-progress{background:var(--rose);color:var(--navy)}
+.status-pending{background:var(--slate);color:var(--navy)}
+.task-check.is-done{background:var(--red);color:var(--surface)}
+.task-check.is-progress{border-color:var(--red);background:var(--surface)}
+.task-check.is-progress::after{background:var(--red)}
+.task-check.is-pending{border-color:var(--slate);background:var(--surface)}
+.small-button,.row-action,.auth-button.is-secondary{border-color:var(--slate);background:var(--surface);color:var(--navy)}
+.small-button:hover,.row-action:hover,.auth-button.is-secondary:hover{border-color:var(--rose);background:var(--rose);color:var(--navy)}
+.small-button.is-primary,.row-action.is-primary{border-color:var(--red);background:var(--red);color:var(--surface)}
+.small-button.is-primary:hover,.row-action.is-primary:hover,.auth-button:hover,.submit-button:hover,.task-add-button:hover{border-color:var(--rose);background:var(--rose);color:var(--navy)}
+.row-action.is-danger,.delete-button:hover{color:var(--red)}
+.delete-button:hover{background:var(--rose)}
+.form-feedback{color:var(--red)}
+#task-feedback{color:var(--surface)}
+input,.task-form input,.task-form select,.edit-dialog input,.edit-dialog select,.edit-dialog textarea{border-color:var(--slate);background:var(--surface);color:var(--navy)}
+input::placeholder{color:var(--slate)}
+input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px #B3071533}
+.edit-dialog{border-color:var(--slate);background:var(--surface);color:var(--navy)}
+.edit-dialog::backdrop{background:#181D2680;backdrop-filter:blur(2px)}
+.edit-dialog h2,.edit-dialog label{color:var(--navy)}
+.calendar-panel{border-color:var(--navy);background:var(--surface);color:var(--navy)}
+.calendar-panel .section-kicker{color:var(--slate)}
+.calendar-toolbar h3,.selected-day-heading h3,.calendar-panel .schedule-copy h3{color:var(--navy)}
+.calendar-weekdays{color:var(--navy)}
+.calendar-nav-button{border-color:var(--navy);background:var(--rose);color:var(--navy)}
+.calendar-nav-button:hover,.calendar-today-button:hover{border-color:var(--red);background:var(--red);color:var(--surface)}
+.calendar-day{border-color:var(--navy);background:var(--surface);color:var(--navy)}
+.calendar-day:hover{border-color:var(--red);background:var(--rose)}
+.calendar-day.is-outside-month{background:var(--rose);color:var(--navy)}
+.calendar-day.is-selected{border-color:var(--red);background:var(--red);color:var(--surface)}
+.calendar-day.is-today .calendar-day-number{outline-color:var(--red)}
+.calendar-day.is-selected.is-today .calendar-day-number{outline-color:var(--surface)}
+.calendar-event-count{background:var(--red);color:var(--surface)}
+.calendar-day.is-selected .calendar-event-count{background:var(--surface);color:var(--red)}
+.calendar-event-dot{background:var(--slate)}
+.calendar-day.is-selected .calendar-event-dot{background:var(--surface)}
+.selected-day{border-top-color:var(--navy)}
+.calendar-panel .schedule-item time{color:var(--navy)}
+.calendar-panel .schedule-copy p,#schedule-empty{color:var(--navy)}
+.calendar-event-overflow{color:var(--navy)}
+.calendar-day.is-selected .calendar-event-overflow{color:var(--surface)}
+.calendar-today-button{background:var(--surface);color:var(--navy)}
+.all-day-option{color:var(--navy)}
+.all-day-option input{accent-color:var(--red)}
+.field-hint{color:var(--slate)}
+.event-tag{border:1px solid var(--slate)}
+.schedule-item:not(:last-child)::after{border-left-color:var(--category-color,var(--slate))}
+.timeline-dot{border-color:var(--category-color,var(--slate));background:var(--category-color,var(--slate))}
+.nav-button:focus-visible,.calendar-day:focus-visible,.calendar-nav-button:focus-visible{outline-color:var(--red)}
+@media(max-width:700px){.main-nav{background:var(--surface)}.calendar-panel{background:var(--surface)}}
