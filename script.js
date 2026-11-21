@@ -21,6 +21,7 @@ import {
   updateDoc,
   writeBatch,
 } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/13.4.0/firebase-functions.js';
 
 // Firebase 網頁設定是公開識別資訊；資料安全由登入狀態與 Firestore 規則負責。
 const firebaseConfig = {
@@ -35,6 +36,8 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
+const functions = getFunctions(firebaseApp, 'asia-east1');
+const requestDailyPlan = httpsCallable(functions, 'generateDailyPlan');
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -79,6 +82,12 @@ const laterTasksTitle = document.querySelector('#later-tasks-title');
 const completedList = document.querySelector('#completed-task-list');
 const completedCount = document.querySelector('#completed-count');
 const completedEmpty = document.querySelector('#completed-empty');
+const generatePlanButton = document.querySelector('#generate-plan-button');
+const aiPlanFeedback = document.querySelector('#ai-plan-feedback');
+const aiPlanResults = document.querySelector('#ai-plan-results');
+const aiPlanSummary = document.querySelector('#ai-plan-summary');
+const aiPlanPriorities = document.querySelector('#ai-plan-priorities');
+const aiPlanSuggestions = document.querySelector('#ai-plan-suggestions');
 const scheduleList = document.querySelector('#schedule-list');
 const scheduleCount = document.querySelector('#schedule-count');
 const scheduleEmpty = document.querySelector('#schedule-empty');
@@ -133,6 +142,10 @@ calendarMonth -= 1;
 let stopTasksListener = null;
 let stopEventsListener = null;
 let stopCategoriesListener = null;
+let tasksReady = false;
+let eventsReady = false;
+let aiPlanPending = false;
+let aiPlanRequestId = 0;
 
 function taipeiDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -195,6 +208,14 @@ function userCollection(name) {
   return collection(db, 'users', currentUser.uid, name);
 }
 
+function updateAiPlanButton() {
+  generatePlanButton.disabled = !currentUser || !tasksReady || !eventsReady || aiPlanPending;
+  if (currentUser && tasksReady && eventsReady && !aiPlanPending
+      && aiPlanFeedback.textContent === '正在載入今日資料…') {
+    aiPlanFeedback.textContent = '今日資料已載入，可以產生 Gemini 建議。';
+  }
+}
+
 function setActiveView(viewName) {
   Object.entries(views).forEach(([name, element]) => {
     element.hidden = name !== viewName;
@@ -217,6 +238,13 @@ function setSignedOutView(message = '請使用 Google 登入以查看個人資�
   tasks = [];
   schedules = [];
   categories = [];
+  tasksReady = false;
+  eventsReady = false;
+  aiPlanPending = false;
+  aiPlanRequestId += 1;
+  aiPlanResults.hidden = true;
+  aiPlanFeedback.textContent = '登入並載入今日資料後即可產生建議。';
+  updateAiPlanButton();
   dashboard.hidden = true;
   loginPrompt.hidden = false;
   userName.textContent = '';
@@ -569,6 +597,50 @@ function renderSchedules() {
   renderCalendar();
 }
 
+function renderAiPlan(plan, taskLookup) {
+  aiPlanSummary.textContent = plan.summary || 'Gemini 已整理今日安排。';
+  aiPlanPriorities.replaceChildren();
+  aiPlanSuggestions.replaceChildren();
+
+  const priorities = Array.isArray(plan.priorities) ? plan.priorities : [];
+  priorities.forEach((item) => {
+    const task = taskLookup.get(item.taskId);
+    if (!task) return;
+    const row = document.createElement('li');
+    const title = document.createElement('strong');
+    title.textContent = task.name;
+    const reason = document.createElement('p');
+    reason.textContent = item.reason || '可依照今天的時間安排處理。';
+    row.append(title, reason);
+    if (Number.isInteger(item.focusMinutes) && item.focusMinutes > 0) {
+      const duration = document.createElement('span');
+      duration.className = 'ai-plan-duration';
+      duration.textContent = `建議先專注 ${item.focusMinutes} 分鐘`;
+      row.append(duration);
+    }
+    aiPlanPriorities.append(row);
+  });
+
+  if (!aiPlanPriorities.childElementCount) {
+    const empty = document.createElement('li');
+    empty.textContent = '今天沒有未完成的待辦，可以留一些彈性時間。';
+    aiPlanPriorities.append(empty);
+  }
+
+  const suggestions = Array.isArray(plan.suggestions) ? plan.suggestions : [];
+  suggestions.forEach((suggestion) => {
+    const item = document.createElement('li');
+    item.textContent = suggestion;
+    aiPlanSuggestions.append(item);
+  });
+  if (!suggestions.length) {
+    const item = document.createElement('li');
+    item.textContent = '依照行程間的空檔安排待辦，並預留休息時間。';
+    aiPlanSuggestions.append(item);
+  }
+  aiPlanResults.hidden = false;
+}
+
 calendarGrid.addEventListener('click', (event) => {
   const day = event.target.closest('[data-date]');
   if (day) setSelectedDate(day.dataset.date, true);
@@ -587,6 +659,9 @@ eventEditAllDay.addEventListener('change', () => updateEventTimeFields(eventEdit
 function showDataError(error) {
   console.error('Firebase 資料讀取失敗：', error.code || error.message);
   authMessage.textContent = '資料讀取失敗；請確認 Firestore 規則與網路連線。';
+  if (!tasksReady || !eventsReady) {
+    aiPlanFeedback.textContent = '無法讀取今日資料，請確認連線後重新載入。';
+  }
 }
 
 function startUserData(user) {
@@ -603,6 +678,13 @@ function startUserData(user) {
   tasks = [];
   schedules = [];
   categories = [];
+  tasksReady = false;
+  eventsReady = false;
+  aiPlanPending = false;
+  aiPlanRequestId += 1;
+  aiPlanResults.hidden = true;
+  aiPlanFeedback.textContent = '正在載入今日資料…';
+  updateAiPlanButton();
   selectedDateKey = taipeiDateKey();
   [calendarYear, calendarMonth] = selectedDateKey.split('-').map(Number);
   calendarMonth -= 1;
@@ -617,11 +699,15 @@ function startUserData(user) {
 
   stopTasksListener = onSnapshot(userCollection('tasks'), (snapshot) => {
     tasks = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    tasksReady = true;
+    updateAiPlanButton();
     renderTasks();
   }, showDataError);
 
   stopEventsListener = onSnapshot(userCollection('events'), (snapshot) => {
     schedules = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    eventsReady = true;
+    updateAiPlanButton();
     renderSchedules();
   }, showDataError);
 
@@ -802,6 +888,62 @@ function isMobileSignInEnvironment() {
   const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
   return isMobile || isIPadOS;
 }
+
+generatePlanButton.addEventListener('click', async () => {
+  if (!currentUser || aiPlanPending) return;
+  const requestId = ++aiPlanRequestId;
+  const requestedByUid = currentUser.uid;
+  const today = taipeiDateKey();
+  const taskLookup = new Map();
+  const dailyTasks = getTodayTasks().map((task, index) => {
+    const id = `task-${index + 1}`;
+    taskLookup.set(id, task);
+    return {
+      id,
+      name: task.name,
+      status: statusLabels[task.status] || statusLabels.pending,
+      dueDate: task.dueDate || '',
+      estimatedMinutes: Number.isFinite(task.estimatedMinutes) ? task.estimatedMinutes : null,
+      difficulty: difficultyLabels[task.difficulty] || '',
+      order: index + 1,
+    };
+  });
+  const dailyEvents = eventsForDate(today).map((item, index) => ({
+    id: `event-${index + 1}`,
+    name: item.name,
+    allDay: Boolean(item.allDay),
+    startTime: item.startTime || item.time || '',
+    endTime: item.endTime || '',
+    category: item.category || '其他',
+  }));
+
+  aiPlanPending = true;
+  updateAiPlanButton();
+  aiPlanFeedback.textContent = 'Gemini 正在整理今天的待辦與行程…';
+  aiPlanResults.hidden = true;
+  try {
+    const response = await requestDailyPlan({ today, tasks: dailyTasks, events: dailyEvents });
+    if (requestId !== aiPlanRequestId || currentUser?.uid !== requestedByUid) return;
+    renderAiPlan(response.data, taskLookup);
+    aiPlanFeedback.textContent = '建議已產生，請依照實際狀況調整。';
+  } catch (error) {
+    console.error('Gemini 今日規劃失敗：', error.code || error.message);
+    if (requestId !== aiPlanRequestId || currentUser?.uid !== requestedByUid) return;
+    const messages = {
+      'functions/unauthenticated': '請先登入，再使用 Gemini 今日規劃。',
+      'functions/resource-exhausted': '今天的 Gemini 使用次數已達上限，請明天再試。',
+      'functions/not-found': 'Gemini 後端尚未部署，暫時無法產生建議。',
+      'functions/failed-precondition': 'Gemini 服務尚未完成設定。',
+      'functions/unavailable': 'Gemini 暫時無法連線，請稍後再試。',
+    };
+    aiPlanFeedback.textContent = messages[error.code] || '目前無法產生建議，請稍後再試或查看部署設定。';
+  } finally {
+    if (requestId === aiPlanRequestId) {
+      aiPlanPending = false;
+      updateAiPlanButton();
+    }
+  }
+});
 
 authButton.addEventListener('click', async () => {
   authButton.disabled = true;

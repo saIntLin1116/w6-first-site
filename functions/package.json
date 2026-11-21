@@ -1,0 +1,15 @@
+{
+  "name": "daily-planner-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "deploy:daily-plan": "firebase deploy --only functions:generateDailyPlan"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.2"
+  }
+}

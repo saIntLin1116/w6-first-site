@@ -34,6 +34,14 @@
 - 每日行程列表顯示時間範圍、行程類別、備註，以及類別顏色標記。
 - 類別可新增並設定固定顏色，顏色會保存在自己的帳號中；再次選取同一類別時沿用已保存顏色。
 
+### Gemini 今日規劃（第一版）
+
+- 根據今日未完成待辦和今日行程，產生待辦優先順序、排序理由、建議專注時間與簡短安排提醒。
+- 使用者按下「整理今日安排」才會送出資料；待辦備註和行程備註不會送出。
+- 建議只供參考，不會自動改動待辦、不會寫回 Firestore，也不會保存 AI 回覆。
+- Gemini API Key 由 Firebase Functions Secret Manager 提供給伺服器端；前端不含 Gemini 私人 Key。
+- 前後端程式已加入，但雲端 Secret、Functions 部署及正式網站端到端驗收尚未完成，因此正式 Pages 目前還不能使用此功能。
+
 ### 介面
 
 - 支援手機窄螢幕版面。
@@ -49,7 +57,7 @@
 - 逐項測試待辦、行程、分類的新增、編輯、狀態變更、刪除及資料保存。
 - 核對已發布的 Firestore 規則及實際操作，確認不同帳號無法存取彼此資料；第二個真實帳號的網站端測試尚待完成。
 - 記錄功能性測試與至少一次使用者測試的真實結果。
-- 實作並驗收 W11 要求的 Gemini AI 第一版。功能範圍和安全的伺服器端呼叫方式尚待確認。
+- 部署 Gemini Functions、在 Firebase Secret Manager 設定 API Key，並完成正式網站端到端驗收。
 - 最後檢查正式網站與交件表單資料。
 
 經驗值（XP）是 W11 交件後再評估的構想，不列入目前必交範圍。
@@ -64,7 +72,7 @@ Firestore 個人資料路徑如下：
 
 `firestore.rules` 限制使用者只能讀寫自己的 UID 路徑。先前進度記錄指出規則曾發布至 Firebase；最近的程式提交沒有重新發布規則，雲端目前狀態應在 Firebase Console 唯讀核對。前端介面本身不能取代資料庫安全規則。
 
-`script.js` 中的 Firebase Web 設定是瀏覽器端公開設定，不是 Gemini 或其他 AI 的私人 API Key。Gemini 若加入正式網站，必須透過安全的伺服器端服務呼叫；不可把私人 AI Key 放進前端或公開 Repo，也不可把學校 Gateway 憑證當成 APP 憑證。
+`script.js` 中的 Firebase Web 設定是瀏覽器端公開設定，不是 Gemini 或其他 AI 的私人 API Key。Gemini 僅由 `functions/index.js` 的伺服器端程式呼叫，私人 Key 需透過 Firebase Secret Manager 設定；不可把私人 AI Key 放進前端或公開 Repo，也不可把學校 Gateway 憑證當成 APP 憑證。Gemini 會收到待辦名稱、狀態、截止日、預估時間、難度，以及行程名稱、時間與類別；任務／行程備註不會送出。每位使用者每日最多呼叫 12 次，計數存在後端私有 Firestore 集合。
 
 本網站使用 Firebase CDN 模組，需要網路連線。請透過本機 HTTP 伺服器或正式 HTTPS 網址開啟，不能直接用 `file://` 執行。
 
@@ -81,6 +89,22 @@ Firestore 個人資料路徑如下：
 - `style.css`：色票、版面、狀態樣式與手機版響應式樣式。
 - `script.js`：Firebase 初始化、登入狀態、頁面互動、待辦與行程操作，以及 Firestore 讀寫。
 - `firestore.rules`：Firestore 使用者 UID 存取規則。
+- `functions/index.js`：驗證登入者、限制 AI 呼叫次數，並在伺服器端呼叫 Gemini。
+- `firebase.json`、`.firebaserc`、`functions/package.json`：Firebase Functions 部署設定。
+
+## Gemini Functions 部署
+
+此功能目前只有程式碼，尚未建立雲端 Secret 或部署 Function。部署前須先確認 Firebase 專案的 Functions 與 Secret Manager 可用。準備好後，在專案根目錄執行：
+
+```sh
+cd functions
+npm install
+cd ..
+firebase functions:secrets:set GEMINI_API_KEY
+firebase deploy --only functions:generateDailyPlan
+```
+
+CLI 會提示輸入 Secret；不要將 API Key 貼到聊天、README、程式碼或 Repo。以上雲端設定與部署尚未執行。
 
 ## 後續構想：經驗值（XP）
 

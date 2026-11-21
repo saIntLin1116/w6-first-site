@@ -288,6 +288,23 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .calendar-event-dot{background:var(--slate)}
 .calendar-day.is-selected .calendar-event-dot{background:var(--surface)}
 .selected-day{border-top-color:var(--navy)}
+
+.ai-plan-panel{margin:24px 0;padding:22px}
+.ai-plan-panel .section-heading{margin-bottom:10px}
+.ai-plan-disclosure,.ai-plan-feedback,.ai-plan-summary{color:var(--navy);font-size:14px;line-height:1.65}
+.ai-plan-disclosure{margin:0 0 14px}
+.ai-plan-feedback{min-height:1.6em;margin:10px 0 0}
+.ai-plan-results{margin-top:18px;padding-top:14px;border-top:1px solid #181D2666}
+.ai-plan-results h4{margin:16px 0 8px;color:var(--navy);font-size:14px}
+.ai-plan-summary{margin:0;font-weight:600}
+.ai-plan-priorities,.ai-plan-suggestions{display:grid;gap:8px;margin:0;padding-left:22px;color:var(--navy)}
+.ai-plan-priorities li,.ai-plan-suggestions li{padding-left:3px;line-height:1.55}
+.ai-plan-priorities li strong{display:block;color:var(--navy)}
+.ai-plan-priorities li p{margin:3px 0;color:var(--navy);font-size:13px}
+.ai-plan-duration{display:inline-block;margin-top:3px;color:#4b5a6e;font-size:12px}
+.ai-plan-panel button:disabled{cursor:wait;opacity:.62}
+@media(max-width:520px){.ai-plan-panel{padding:16px}.ai-plan-disclosure,.ai-plan-feedback,.ai-plan-summary{font-size:13px}}
+.intro .eyebrow{color:#efefef}
 .calendar-panel .schedule-item time{color:var(--navy)}
 .calendar-panel .schedule-copy p,#schedule-empty{color:var(--navy)}
 .calendar-event-overflow{color:var(--navy)}
