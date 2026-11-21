@@ -71,6 +71,7 @@ const nextTaskCard = document.querySelector('#next-task-card');
 const nextTaskName = document.querySelector('#next-task-name');
 const nextTaskDetail = document.querySelector('#next-task-detail');
 const completeNextTask = document.querySelector('#complete-next-task');
+const editNextTask = document.querySelector('#edit-next-task');
 const returnNextTask = document.querySelector('#return-next-task');
 const laterTasksTitle = document.querySelector('#later-tasks-title');
 const completedList = document.querySelector('#completed-task-list');
@@ -111,7 +112,7 @@ const eventEditTimeFields = document.querySelector('#edit-event-time-fields');
 const eventEditNote = document.querySelector('#edit-event-note');
 const eventEditFeedback = document.querySelector('#edit-event-feedback');
 
-const statusLabels = { pending: '待處理', progress: '進行中', done: '已完成' };
+const statusLabels = { pending: '未開始', progress: '進行中', done: '已完成' };
 const difficultyLabels = { low: '低', medium: '中', high: '高' };
 const defaultEventCategories = ['課業', '工作', '生活', '社交', '其他'];
 const eventCategoryPalette = ['#114665', '#720f32', '#7b445a', '#16202b', '#85858b'];
@@ -315,6 +316,7 @@ function renderTaskRow(task, location, position = 0, total = 0) {
   actions.className = 'task-actions';
   actions.append(createActionButton('編輯', 'edit-task'));
   if (location === 'inbox') {
+    if (task.status === 'progress') actions.append(createActionButton('退回未開始', 'mark-pending'));
     actions.append(createActionButton('加入今日', 'add-to-today', 'row-action is-primary'));
   } else if (location === 'today') {
     const up = createActionButton('上移', 'move-up');
@@ -353,6 +355,7 @@ function renderTasks() {
     nextTaskName.textContent = firstTask.name;
     nextTaskDetail.textContent = taskDetail(firstTask);
     completeNextTask.dataset.id = firstTask.id;
+    editNextTask.dataset.id = firstTask.id;
     returnNextTask.dataset.id = firstTask.id;
     nextTaskCard.hidden = false;
   } else {
@@ -399,6 +402,15 @@ function eventCategoryColor(category = '其他') {
   let hash = 0;
   for (const character of name) hash = (hash * 31 + character.codePointAt(0)) >>> 0;
   return eventCategoryPalette[hash % eventCategoryPalette.length];
+}
+
+function categoryTextColor(hexColor) {
+  const hex = /^#[0-9a-f]{6}$/i.test(hexColor || '') ? hexColor.slice(1) : '16202b';
+  const channels = [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255);
+  const luminance = channels
+    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+    .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+  return luminance > 0.22 ? '#16202b' : '#ffffff';
 }
 
 function refreshEventCategoryOptions() {
@@ -518,6 +530,8 @@ function renderSchedules() {
     time.textContent = eventTimeLabel(item);
     const dot = document.createElement('span');
     dot.className = 'timeline-dot';
+    const categoryColor = eventCategoryColor(item.category);
+    row.style.setProperty('--category-color', categoryColor);
     const copy = document.createElement('div');
     copy.className = 'schedule-copy';
     const title = document.createElement('h3');
@@ -527,6 +541,8 @@ function renderSchedules() {
     copy.append(title, note);
     const tag = document.createElement('span');
     tag.className = `event-tag tag-${item.style || 'other'}`;
+    tag.style.backgroundColor = categoryColor;
+    tag.style.color = categoryTextColor(categoryColor);
     tag.textContent = item.category || '行程';
     const actions = document.createElement('div');
     actions.className = 'event-actions';
@@ -682,7 +698,7 @@ function updateEventTimeFields(checkbox, container, startInput, endInput) {
   startInput.disabled = allDay;
   endInput.disabled = allDay;
   startInput.required = !allDay;
-  endInput.required = !allDay;
+  endInput.required = false;
 }
 
 function openEventEditor(event) {
@@ -708,7 +724,7 @@ function closeEventEditor() {
 
 function validTimeRange(allDay, start, end) {
   const validTime = (value) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
-  return allDay || (validTime(start) && validTime(end) && end > start);
+  return allDay || (validTime(start) && (!end || (validTime(end) && end > start)));
 }
 
 async function handleTaskAction(event) {
@@ -727,6 +743,9 @@ async function handleTaskAction(event) {
         break;
       }
       case 'undo-completion':
+        await saveTaskStatus(task, 'pending');
+        break;
+      case 'mark-pending':
         await saveTaskStatus(task, 'pending');
         break;
       case 'add-to-today':
@@ -845,6 +864,11 @@ returnNextTask.addEventListener('click', async () => {
   }
 });
 
+editNextTask.addEventListener('click', () => {
+  const task = tasks.find((item) => item.id === editNextTask.dataset.id);
+  if (task && currentUser) openTaskEditor(task);
+});
+
 editForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!currentUser || !editingTaskId) return;
@@ -893,7 +917,7 @@ scheduleForm.addEventListener('submit', async (event) => {
   const endTime = allDay ? '' : eventEndInput.value;
   const note = document.querySelector('#event-note').value.trim();
   if (!name || !date || !category) { scheduleFeedback.textContent = '請填寫行程名稱、日期與類別。'; return; }
-  if (!validTimeRange(allDay, startTime, endTime)) { scheduleFeedback.textContent = '請輸入 24 小時制時間（例如 09:30），且結束時間晚於開始時間。'; return; }
+  if (!validTimeRange(allDay, startTime, endTime)) { scheduleFeedback.textContent = '開始時間請用 24 小時制；結束時間可留空，如有填寫須晚於開始時間。'; return; }
   try {
     await saveEventCategory(category, eventCategoryColorInput.value);
     await addDoc(userCollection('events'), {
@@ -938,7 +962,7 @@ eventEditForm.addEventListener('submit', async (event) => {
   const startTime = allDay ? '' : eventEditStart.value;
   const endTime = allDay ? '' : eventEditEnd.value;
   if (!name || !date || !category) { eventEditFeedback.textContent = '請填寫行程名稱、日期與類別。'; return; }
-  if (!validTimeRange(allDay, startTime, endTime)) { eventEditFeedback.textContent = '請輸入 24 小時制時間（例如 09:30），且結束時間晚於開始時間。'; return; }
+  if (!validTimeRange(allDay, startTime, endTime)) { eventEditFeedback.textContent = '開始時間請用 24 小時制；結束時間可留空，如有填寫須晚於開始時間。'; return; }
   try {
     await saveEventCategory(category, eventEditCategoryColor.value);
     await updateDoc(doc(db, 'users', currentUser.uid, 'events', editingEventId), {

@@ -205,3 +205,20 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .category-color-field input[type=color]{width:68px;min-width:68px;min-height:40px;padding:4px;cursor:pointer}
 .category-color-field input[type=color]:disabled{cursor:not-allowed;opacity:.7}
 .time-format-hint{grid-column:1/-1}
+
+/* Ink Black page background and category colors in the daily schedule */
+:root{color:#d1d1d6;background:#16202b}
+body{color:#d1d1d6;background:radial-gradient(ellipse at 8% 6%,#263747 0,transparent 32%),#16202b}
+.topbar{border-bottom-color:#d1d1d633}
+.brand,.intro h1{color:#f5f5f7}
+.topbar-note,.intro-subtitle,.footer{color:#b9c2cb}
+.footer span span{color:#9eb8c8}
+.auth-message,.user-name{color:#c3adba}
+#today-view .section-heading h2,#inbox-view .section-heading h2{color:#e7e9ed}
+#today-view .section-kicker,#inbox-view .section-kicker{color:#c58fa3}
+#today-view .subsection-title{color:#d1d1d6}
+#today-view .completed-panel{border-top-color:#d1d1d633}
+#today-view .completed-panel summary,#today-view .completed-panel summary span{color:#c3cbd3}
+#today-empty,#inbox-empty,#completed-empty,#inbox-view .section-description{color:#b9c2cb}
+.schedule-item:not(:last-child)::after{border-left-color:var(--category-color,#d1d1d6)}
+.timeline-dot{border-color:var(--category-color,#7b445a);background:var(--category-color,#7b445a)}

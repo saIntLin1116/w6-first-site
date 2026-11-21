@@ -55,6 +55,7 @@
           <p id="next-task-detail"></p>
           <div class="spotlight-actions">
             <button class="small-button is-primary" id="complete-next-task" type="button">標記完成</button>
+            <button class="small-button" id="edit-next-task" type="button">編輯資訊</button>
             <button class="small-button" id="return-next-task" type="button">移回清單</button>
           </div>
         </section>
@@ -127,7 +128,7 @@
             <label class="all-day-option" for="event-all-day"><input id="event-all-day" name="event-all-day" type="checkbox"> 全天行程</label>
             <div class="form-row event-time-fields" id="event-time-fields">
               <div class="field"><label for="event-start-time">開始時間</label><input id="event-start-time" name="event-start-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30" required></div>
-              <div class="field"><label for="event-end-time">結束時間</label><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30" required></div>
+              <div class="field"><label for="event-end-time">結束時間 <span class="optional">選填</span></label><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
               <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
             </div>
             <div class="field"><label for="event-note">備註 <span class="optional">選填</span></label><input id="event-note" name="event-note" type="text" maxlength="240" placeholder="地點或想記下的小提醒"></div>
@@ -171,7 +172,7 @@
         <label class="all-day-option" for="edit-event-all-day"><input id="edit-event-all-day" type="checkbox"> 全天行程</label>
         <div class="form-row event-time-fields" id="edit-event-time-fields">
           <div class="field"><label for="edit-event-start">開始時間</label><input id="edit-event-start" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30"></div>
-          <div class="field"><label for="edit-event-end">結束時間</label><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
+          <div class="field"><label for="edit-event-end">結束時間 <span class="optional">選填</span></label><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
           <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
         </div>
         <div class="field"><label for="edit-event-note">備註 <span class="optional">選填</span></label><textarea id="edit-event-note" maxlength="240" rows="3"></textarea></div>
