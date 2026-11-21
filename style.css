@@ -119,7 +119,7 @@ input::placeholder{color:#b1bab4}input:focus{border-color:#93b19b;box-shadow:0 0
 @media(max-width:390px){.task-item-rich .task-copy h3{font-size:11px}.row-action{min-height:32px;padding:0 8px;font-size:9px}.spotlight-card h3{font-size:18px}.calendar-view .form-row{grid-template-columns:minmax(0,1fr) 112px}}
 
 /* Project palette and monthly calendar */
-:root{--navy:#16202b;--ocean:#114665;--berry:#720f32;--mauve:#7b445a;--ash:#d1d1d6;--green:var(--ocean);--muted:var(--mauve);--line:#d1d1d6;color:#16202b;background:#f5f5f7}
+:root{--navy:#1c1c1f;--ocean:#114665;--berry:#720f32;--mauve:#7b445a;--ash:#d1d1d6;--green:var(--ocean);--muted:var(--mauve);--line:#d1d1d6;color:#16202b;background:#f5f5f7}
 body{color:#16202b;background:#f5f5f7}
 .brand,.intro h1,.section-heading h2,.section-heading h3,.schedule-copy h3,.task-copy h3{color:#16202b}
 .brand-mark{background:#114665;color:#fff}
@@ -207,8 +207,8 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .time-format-hint{grid-column:1/-1}
 
 /* Ink Black page background and category colors in the daily schedule */
-:root{color:#d1d1d6;background:#16202b}
-body{color:#d1d1d6;background:radial-gradient(ellipse at 8% 6%,#263747 0,transparent 32%),#16202b}
+:root{color:#d1d1d6;background:#1c1c1f}
+body{color:#d1d1d6;background:linear-gradient(180deg,#1c1c1f 0%,#5e5f5c 100%);background-attachment:fixed}
 .topbar{border-bottom-color:#d1d1d633}
 .brand,.intro h1{color:#f5f5f7}
 .topbar-note,.intro-subtitle,.footer{color:#b9c2cb}
@@ -222,3 +222,23 @@ body{color:#d1d1d6;background:radial-gradient(ellipse at 8% 6%,#263747 0,transpa
 #today-empty,#inbox-empty,#completed-empty,#inbox-view .section-description{color:#b9c2cb}
 .schedule-item:not(:last-child)::after{border-left-color:var(--category-color,#d1d1d6)}
 .timeline-dot{border-color:var(--category-color,#7b445a);background:var(--category-color,#7b445a)}
+
+/* Requested palette refinements */
+:root{background:#1c1c1f}
+body{background:linear-gradient(180deg,#1c1c1f 0%,#5e5f5c 100%);background-attachment:fixed}
+.intro .eyebrow{color:#8b2323}
+.main-nav{border-color:#929491;background:#B0B2AF}
+.nav-button{color:#16202b}
+.nav-button.is-active{background:#114665;color:#fff}
+.calendar-panel{background:#B0B2AF;color:#16202b}
+.calendar-panel .section-kicker{color:#303b47}
+.calendar-toolbar h3,.selected-day-heading h3,.calendar-panel .schedule-copy h3{color:#16202b}
+.calendar-weekdays{color:#16202b}
+.calendar-day{border-color:#929491;background:#B0B2AF;color:#16202b}
+.calendar-day:hover{border-color:#747673;background:#c2c4c1}
+.calendar-day.is-outside-month{background:#525350;color:#c4c5c3}
+.calendar-day.is-selected{border-color:#114665;background:#114665;color:#fff}
+.selected-day{border-top-color:#858683}
+.calendar-panel .schedule-item time{color:#16202b}
+.calendar-panel .schedule-copy p,#schedule-empty{color:#303b47}
+.calendar-event-overflow{color:#16202b}
