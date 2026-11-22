@@ -1381,21 +1381,20 @@ eventEditDialog.addEventListener('click', (event) => { if (event.target === even
 showToday();
 setActiveView('today');
 let redirectErrorMessage = '';
-getRedirectResult(auth)
-  .catch((error) => {
-    console.error('Google 重新導向登入未完成：', error.code || error.message);
-    redirectErrorMessage = googleSignInErrorMessage(error);
-  })
-  .finally(() => {
-    onAuthStateChanged(auth, (user) => {
-      if (user) startUserData(user);
-      else {
-        setSignedOutView(redirectErrorMessage || undefined);
-        redirectErrorMessage = '';
-      }
-    }, (error) => {
-      console.error('登入狀態讀取失敗：', error.code || error.message);
-      setSignedOutView(redirectErrorMessage || '無法確認登入狀態，請重新整理或再試一次。');
-      redirectErrorMessage = '';
-    });
-  });
+onAuthStateChanged(auth, (user) => {
+  if (user) startUserData(user);
+  else {
+    setSignedOutView(redirectErrorMessage || undefined);
+    redirectErrorMessage = '';
+  }
+}, (error) => {
+  console.error('登入狀態讀取失敗：', error.code || error.message);
+  setSignedOutView(redirectErrorMessage || '無法確認登入狀態，請重新整理或再試一次。');
+  redirectErrorMessage = '';
+});
+
+getRedirectResult(auth).catch((error) => {
+  console.error('Google 重新導向登入未完成：', error.code || error.message);
+  redirectErrorMessage = googleSignInErrorMessage(error);
+  if (!auth.currentUser) authMessage.textContent = redirectErrorMessage;
+});
