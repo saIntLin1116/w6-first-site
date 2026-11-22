@@ -49,6 +49,20 @@
           <div><p class="section-kicker">YOUR DAY</p><h2 id="today-view-title">今日要推進的事</h2></div>
           <span class="count-pill" id="today-count">0 項任務</span>
         </div>
+        <section class="xp-card" aria-labelledby="xp-title">
+          <div class="xp-card-heading">
+            <div><p class="section-kicker">YOUR PROGRESS</p><h3 id="xp-title">等級 <span id="xp-level">1</span></h3></div>
+            <strong class="xp-total" id="xp-total">0 XP</strong>
+          </div>
+          <progress class="xp-progress" id="xp-progress" max="100" value="0" aria-label="升級進度"></progress>
+          <p class="xp-next-level" id="xp-next-level">累積 100 XP 升級；首次完成待辦可獲得 10 XP。</p>
+          <p class="xp-completions" id="xp-completions">已記錄完成 0 項待辦</p>
+          <details class="xp-history">
+            <summary>查看最近完成紀錄</summary>
+            <ul id="xp-history-list" aria-live="polite"></ul>
+            <p id="xp-history-empty">還沒有完成紀錄。</p>
+          </details>
+        </section>
         <section class="spotlight-card" id="next-task-card" aria-live="polite" hidden>
           <p class="spotlight-label">現在先做這一件</p>
           <h3 id="next-task-name"></h3>

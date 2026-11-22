@@ -289,6 +289,23 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .calendar-day.is-selected .calendar-event-dot{background:var(--surface)}
 .selected-day{border-top-color:var(--navy)}
 
+.xp-card{margin:0 0 20px;padding:18px 20px;border:1px solid var(--slate);border-radius:14px;background:linear-gradient(130deg,var(--surface),#ffffff);color:var(--navy)}
+.xp-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.xp-card .section-kicker{margin:0 0 4px;color:var(--slate)}
+.xp-card h3{margin:0;color:var(--navy);font-size:16px;font-weight:650}
+.xp-total{color:var(--red);font-size:18px;white-space:nowrap}
+.xp-progress{display:block;width:100%;height:9px;margin:14px 0 8px;overflow:hidden;border:0;border-radius:10px;background:var(--rose);accent-color:var(--red)}
+.xp-progress::-webkit-progress-bar{border-radius:10px;background:var(--rose)}
+.xp-progress::-webkit-progress-value{border-radius:10px;background:var(--red)}
+.xp-progress::-moz-progress-bar{border-radius:10px;background:var(--red)}
+.xp-next-level,.xp-completions{margin:0;color:var(--navy);font-size:11px;line-height:1.6}
+.xp-completions{margin-top:3px;color:#526173}
+.xp-history{margin-top:11px;padding-top:9px;border-top:1px solid #7B8DA666}
+.xp-history summary{color:var(--navy);font-size:11px;font-weight:600;cursor:pointer}
+.xp-history ul{display:grid;gap:8px;margin:10px 0 0;padding:0;list-style:none}
+.xp-history li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;color:var(--navy);font-size:10px;line-height:1.5}
+.xp-history li span{color:#526173}
+.xp-history>p{margin:9px 0 0;color:#526173;font-size:10px}
 .ai-plan-panel{margin:24px 0;padding:22px}
 .ai-plan-panel .section-heading{margin-bottom:10px}
 .ai-plan-disclosure,.ai-plan-feedback,.ai-plan-summary{color:var(--navy);font-size:14px;line-height:1.65}
@@ -303,7 +320,7 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .ai-plan-priorities li p{margin:3px 0;color:var(--navy);font-size:13px}
 .ai-plan-duration{display:inline-block;margin-top:3px;color:#4b5a6e;font-size:12px}
 .ai-plan-panel button:disabled{cursor:wait;opacity:.62}
-@media(max-width:520px){.ai-plan-panel{padding:16px}.ai-plan-disclosure,.ai-plan-feedback,.ai-plan-summary{font-size:13px}}
+@media(max-width:520px){.xp-card{padding:16px}.xp-total{font-size:16px}.ai-plan-panel{padding:16px}.ai-plan-disclosure,.ai-plan-feedback,.ai-plan-summary{font-size:13px}}
 .intro .eyebrow{color:#efefef}
 .calendar-panel .schedule-item time{color:var(--navy)}
 .calendar-panel .schedule-copy p,#schedule-empty{color:var(--navy)}

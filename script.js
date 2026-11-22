@@ -15,7 +15,11 @@ import {
   doc,
   getDoc,
   getFirestore,
+  limit,
+  orderBy,
   onSnapshot,
+  query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -82,6 +86,13 @@ const laterTasksTitle = document.querySelector('#later-tasks-title');
 const completedList = document.querySelector('#completed-task-list');
 const completedCount = document.querySelector('#completed-count');
 const completedEmpty = document.querySelector('#completed-empty');
+const xpLevel = document.querySelector('#xp-level');
+const xpTotal = document.querySelector('#xp-total');
+const xpProgress = document.querySelector('#xp-progress');
+const xpNextLevel = document.querySelector('#xp-next-level');
+const xpCompletions = document.querySelector('#xp-completions');
+const xpHistoryList = document.querySelector('#xp-history-list');
+const xpHistoryEmpty = document.querySelector('#xp-history-empty');
 const generatePlanButton = document.querySelector('#generate-plan-button');
 const aiPlanFeedback = document.querySelector('#ai-plan-feedback');
 const aiPlanResults = document.querySelector('#ai-plan-results');
@@ -142,10 +153,13 @@ calendarMonth -= 1;
 let stopTasksListener = null;
 let stopEventsListener = null;
 let stopCategoriesListener = null;
+let stopXpListener = null;
+let stopCompletionHistoryListener = null;
 let tasksReady = false;
 let eventsReady = false;
 let aiPlanPending = false;
 let aiPlanRequestId = 0;
+let xpStats = { totalXp: 0, completedCount: 0 };
 
 function taipeiDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -208,6 +222,55 @@ function userCollection(name) {
   return collection(db, 'users', currentUser.uid, name);
 }
 
+function xpStatsDocument(uid = currentUser?.uid) {
+  if (!uid) throw new Error('請先登入再讀取經驗值。');
+  return doc(db, 'users', uid, 'stats', 'progress');
+}
+
+function completionRecordDocument(uid, taskId) {
+  return doc(db, 'users', uid, 'completionRecords', taskId);
+}
+
+function renderXpStats() {
+  const totalXp = Number.isSafeInteger(xpStats.totalXp) && xpStats.totalXp > 0
+    ? xpStats.totalXp
+    : 0;
+  const completedCount = Number.isSafeInteger(xpStats.completedCount) && xpStats.completedCount > 0
+    ? xpStats.completedCount
+    : 0;
+  const level = Math.floor(totalXp / 100) + 1;
+  const progress = totalXp % 100;
+  xpLevel.textContent = String(level);
+  xpTotal.textContent = `${totalXp} XP`;
+  xpProgress.value = progress;
+  xpProgress.setAttribute('aria-valuetext', `距離等級 ${level + 1} 還差 ${100 - progress} XP`);
+  xpNextLevel.textContent = `距離等級 ${level + 1} 還差 ${100 - progress} XP；首次完成待辦可獲得 10 XP。`;
+  xpCompletions.textContent = `已記錄完成 ${completedCount} 項待辦`;
+}
+
+function renderCompletionHistory(records = []) {
+  xpHistoryList.replaceChildren();
+  records.forEach((record) => {
+    const row = document.createElement('li');
+    const name = document.createElement('strong');
+    name.textContent = record.taskName || '已刪除待辦';
+    const timestamp = getTimestamp(record.completedAt);
+    const dateText = timestamp
+      ? new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', dateStyle: 'medium' }).format(timestamp)
+      : '日期未提供';
+    const details = document.createElement('span');
+    const xpEarned = Number.isSafeInteger(record.xpEarned) && record.xpEarned > 0
+      ? record.xpEarned
+      : 0;
+    const deletedLabel = record.taskDeleted ? '・待辦已刪除' : '';
+    details.textContent = `${dateText}・+${xpEarned} XP${deletedLabel}`;
+    row.append(name, details);
+    xpHistoryList.append(row);
+  });
+  xpHistoryEmpty.textContent = records.length ? '' : '還沒有完成紀錄。';
+  xpHistoryEmpty.hidden = records.length > 0;
+}
+
 function updateAiPlanButton() {
   generatePlanButton.disabled = !currentUser || !tasksReady || !eventsReady || aiPlanPending;
   if (currentUser && tasksReady && eventsReady && !aiPlanPending
@@ -231,13 +294,20 @@ function setSignedOutView(message = '請使用 Google 登入以查看個人資�
   stopTasksListener?.();
   stopEventsListener?.();
   stopCategoriesListener?.();
+  stopXpListener?.();
+  stopCompletionHistoryListener?.();
   stopTasksListener = null;
   stopEventsListener = null;
   stopCategoriesListener = null;
+  stopXpListener = null;
+  stopCompletionHistoryListener = null;
   currentUser = null;
   tasks = [];
   schedules = [];
   categories = [];
+  xpStats = { totalXp: 0, completedCount: 0 };
+  renderXpStats();
+  renderCompletionHistory();
   tasksReady = false;
   eventsReady = false;
   aiPlanPending = false;
@@ -668,6 +738,8 @@ function startUserData(user) {
   stopTasksListener?.();
   stopEventsListener?.();
   stopCategoriesListener?.();
+  stopXpListener?.();
+  stopCompletionHistoryListener?.();
   currentUser = user;
   dashboard.hidden = false;
   loginPrompt.hidden = true;
@@ -678,6 +750,9 @@ function startUserData(user) {
   tasks = [];
   schedules = [];
   categories = [];
+  xpStats = { totalXp: 0, completedCount: 0 };
+  renderXpStats();
+  renderCompletionHistory();
   tasksReady = false;
   eventsReady = false;
   aiPlanPending = false;
@@ -718,14 +793,150 @@ function startUserData(user) {
     if (eventEditDialog.open) syncCategoryColor(eventEditCategory, eventEditCategoryColor);
     renderSchedules();
   }, showDataError);
+
+  stopXpListener = onSnapshot(xpStatsDocument(user.uid), (snapshot) => {
+    xpStats = snapshot.exists() ? snapshot.data() : { totalXp: 0, completedCount: 0 };
+    renderXpStats();
+  }, (error) => {
+    console.error('經驗值讀取失敗：', error.code || error.message);
+    xpNextLevel.textContent = '目前無法讀取經驗值，請確認連線與 Firestore 規則。';
+  });
+
+  xpHistoryEmpty.textContent = '載入完成紀錄中…';
+  const completionHistoryQuery = query(
+    userCollection('completionRecords'),
+    orderBy('completedAt', 'desc'),
+    limit(10),
+  );
+  stopCompletionHistoryListener = onSnapshot(completionHistoryQuery, (snapshot) => {
+    renderCompletionHistory(snapshot.docs.map((item) => item.data()));
+  }, (error) => {
+    console.error('完成紀錄讀取失敗：', error.code || error.message);
+    xpHistoryEmpty.textContent = '目前無法讀取完成紀錄。';
+    xpHistoryEmpty.hidden = false;
+  });
 }
 
 async function saveTaskStatus(task, status) {
-  const taskRef = doc(db, 'users', currentUser.uid, 'tasks', task.id);
-  await updateDoc(taskRef, {
-    status,
-    completedAt: status === 'done' ? serverTimestamp() : null,
-    updatedAt: serverTimestamp(),
+  const uid = currentUser.uid;
+  const taskRef = doc(db, 'users', uid, 'tasks', task.id);
+  const completionRef = completionRecordDocument(uid, task.id);
+  const statsRef = xpStatsDocument(uid);
+
+  await runTransaction(db, async (transaction) => {
+    const taskSnapshot = await transaction.get(taskRef);
+    if (!taskSnapshot.exists()) throw new Error('找不到這項待辦。');
+    const currentTask = taskSnapshot.data();
+    const completionSnapshot = status === 'done' || currentTask.status === 'done'
+      ? await transaction.get(completionRef)
+      : null;
+    const isNewCompletion = status === 'done' && currentTask.status !== 'done'
+      && !completionSnapshot?.exists();
+    const isLegacyCompletion = currentTask.status === 'done' && status !== 'done'
+      && !completionSnapshot?.exists();
+
+    if (isNewCompletion) {
+      const statsSnapshot = await transaction.get(statsRef);
+      const savedStats = statsSnapshot.exists() ? statsSnapshot.data() : {};
+      const totalXp = Number.isSafeInteger(savedStats.totalXp) && savedStats.totalXp > 0
+        ? savedStats.totalXp
+        : 0;
+      const completedCount = Number.isSafeInteger(savedStats.completedCount) && savedStats.completedCount > 0
+        ? savedStats.completedCount
+        : 0;
+      transaction.set(statsRef, {
+        totalXp: totalXp + 10,
+        completedCount: completedCount + 1,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      transaction.set(completionRef, {
+        taskId: task.id,
+        taskName: currentTask.name || task.name || '已刪除待辦',
+        xpEarned: 10,
+        legacy: false,
+        completedAt: serverTimestamp(),
+        recordedAt: serverTimestamp(),
+      });
+    } else if (isLegacyCompletion) {
+      const statsSnapshot = await transaction.get(statsRef);
+      const savedStats = statsSnapshot.exists() ? statsSnapshot.data() : {};
+      const totalXp = Number.isSafeInteger(savedStats.totalXp) && savedStats.totalXp > 0
+        ? savedStats.totalXp
+        : 0;
+      const completedCount = Number.isSafeInteger(savedStats.completedCount) && savedStats.completedCount > 0
+        ? savedStats.completedCount
+        : 0;
+      transaction.set(statsRef, {
+        totalXp,
+        completedCount: completedCount + 1,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      transaction.set(completionRef, {
+        taskId: task.id,
+        taskName: currentTask.name || task.name || '已刪除待辦',
+        xpEarned: 0,
+        legacy: true,
+        completedAt: currentTask.completedAt || serverTimestamp(),
+        recordedAt: serverTimestamp(),
+      });
+    }
+
+    transaction.update(taskRef, {
+      status,
+      completedAt: status === 'done'
+        ? (currentTask.status === 'done' ? currentTask.completedAt || serverTimestamp() : serverTimestamp())
+        : null,
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+async function deleteTaskAndKeepCompletion(task) {
+  const uid = currentUser.uid;
+  const taskRef = doc(db, 'users', uid, 'tasks', task.id);
+  const completionRef = completionRecordDocument(uid, task.id);
+  const statsRef = xpStatsDocument(uid);
+
+  await runTransaction(db, async (transaction) => {
+    const taskSnapshot = await transaction.get(taskRef);
+    if (!taskSnapshot.exists()) return;
+    const currentTask = taskSnapshot.data();
+    const completionSnapshot = await transaction.get(completionRef);
+
+    if (currentTask.status === 'done') {
+      if (completionSnapshot.exists()) {
+        transaction.set(completionRef, {
+          taskDeleted: true,
+          deletedAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        const statsSnapshot = await transaction.get(statsRef);
+        const savedStats = statsSnapshot.exists() ? statsSnapshot.data() : {};
+        const totalXp = Number.isSafeInteger(savedStats.totalXp) && savedStats.totalXp > 0
+          ? savedStats.totalXp
+          : 0;
+        const completedCount = Number.isSafeInteger(savedStats.completedCount) && savedStats.completedCount > 0
+          ? savedStats.completedCount
+          : 0;
+        transaction.set(statsRef, {
+          totalXp,
+          completedCount: completedCount + 1,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        transaction.set(completionRef, {
+          taskId: task.id,
+          taskName: currentTask.name || task.name || '已刪除待辦',
+          xpEarned: 0,
+          legacy: true,
+          completedAt: currentTask.completedAt || serverTimestamp(),
+          recordedAt: serverTimestamp(),
+          taskDeleted: true,
+          deletedAt: serverTimestamp(),
+        });
+      }
+    }
+
+    transaction.delete(taskRef);
   });
 }
 
@@ -853,7 +1064,7 @@ async function handleTaskAction(event) {
         break;
       case 'delete-task':
         if (window.confirm(`確定刪除任務「${task.name}」？`)) {
-          await deleteDoc(doc(db, 'users', currentUser.uid, 'tasks', task.id));
+          await deleteTaskAndKeepCompletion(task);
         }
         break;
       default:
