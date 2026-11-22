@@ -1083,7 +1083,8 @@ navButtons.forEach((button) => {
 function googleSignInErrorMessage(error) {
   const messages = {
     'auth/popup-closed-by-user': '登入視窗已關閉，尚未登入。',
-    'auth/popup-blocked': '瀏覽器封鎖登入視窗，正在改用重新導向登入。',
+    'auth/popup-blocked': '瀏覽器封鎖了 Google 登入視窗，請允許彈出式視窗後重試。',
+    'auth/operation-not-supported-in-this-environment': '目前瀏覽環境無法開啟 Google 登入視窗，請用 Safari 或 Chrome 一般分頁再試。',
     'auth/unauthorized-domain': '這個網站網址尚未加入 Firebase 授權網域。',
     'auth/operation-not-allowed': 'Firebase 專案尚未啟用 Google 登入。',
     'auth/web-storage-unsupported': '此瀏覽器限制了登入所需的網站儲存功能，請改用一般瀏覽模式。',
@@ -1098,6 +1099,12 @@ function isMobileSignInEnvironment() {
   const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
   const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
   return isMobile || isIPadOS;
+}
+
+function isIosSignInEnvironment() {
+  const userAgent = navigator.userAgent || '';
+  return /iPhone|iPad|iPod/i.test(userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
 generatePlanButton.addEventListener('click', async () => {
@@ -1157,19 +1164,20 @@ generatePlanButton.addEventListener('click', async () => {
 });
 
 authButton.addEventListener('click', async () => {
+  const useRedirectFlow = isMobileSignInEnvironment() && !isIosSignInEnvironment();
   authButton.disabled = true;
-  authMessage.textContent = isMobileSignInEnvironment()
+  authMessage.textContent = useRedirectFlow
     ? '正在前往 Google 登入…'
     : '正在開啟 Google 登入…';
   try {
-    if (isMobileSignInEnvironment()) {
+    if (useRedirectFlow) {
       await signInWithRedirect(auth, googleProvider);
       return;
     }
     await signInWithPopup(auth, googleProvider);
   } catch (error) {
     console.error('Google 登入未完成：', error.code || error.message);
-    if (error.code === 'auth/popup-blocked') {
+    if (error.code === 'auth/popup-blocked' && !isIosSignInEnvironment()) {
       authMessage.textContent = '彈出視窗被封鎖，正在改用重新導向登入…';
       try {
         await signInWithRedirect(auth, googleProvider);
