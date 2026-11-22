@@ -56,7 +56,7 @@
 
 ## 驗收進度
 
-截至 2026-11-22，GitHub Pages 已部署 `f295454`，包含 Gemini 前端與 XP 第一版。XP 尚待功能操作驗收；Gemini Secret 與 Functions 尚未設定及部署，因此 Gemini 呼叫仍不可用。先前對較早版本的初步查看不代表這次更新已完成系統測試。
+截至 2026-11-22，GitHub Pages 已部署 Gemini 前端與 XP 第一版。XP 尚待功能操作驗收；Gemini Secret 與 Functions 尚未設定及部署，因此 Gemini 呼叫仍不可用。先前對較早版本的初步查看不代表這次更新已完成系統測試。
 
 尚待完成或補上紀錄：
 
