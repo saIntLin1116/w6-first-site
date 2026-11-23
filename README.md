@@ -5,6 +5,7 @@
 - 正式網站：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)
 - GitHub Repo：[`saIntLin1116/w6-first-site`](https://github.com/saIntLin1116/w6-first-site)
 - [查看 main 分支的提交紀錄](https://github.com/saIntLin1116/w6-first-site/commits/main)
+- [開發交接與目前待辦](./HANDOFF.md)｜[需求與尚待確認事項](./REQUIREMENTS.md)
 
 ## 目前功能
 
@@ -39,8 +40,8 @@
 - 根據今日未完成待辦和今日行程，產生待辦優先順序、排序理由、建議專注時間與簡短安排提醒。
 - 使用者按下「整理今日安排」才會送出資料；待辦備註和行程備註不會送出。
 - 建議只供參考，不會自動改動待辦、不會寫回 Firestore，也不會保存 AI 回覆。
-- Gemini API Key 由 Firebase Functions Secret Manager 提供給伺服器端；前端不含 Gemini 私人 Key。
-- 前後端程式已加入，但雲端 Secret、Functions 部署及正式網站端到端驗收尚未完成，因此正式 Pages 目前還不能使用此功能。
+- 透過 Firebase AI Logic 的 Gemini Developer API 及 App Check 呼叫 Gemini；私人 Gemini API Key 不放入前端或 Repo。
+- 免費方案使用 Spark 上的 Gemini Developer API 免費額度；可用模型與請求量受 Google 配額限制。Firebase AI Logic 已啟用，App Check 已註冊；仍待正式網站發佈與端到端驗收。
 
 ### 經驗值與等級
 
@@ -56,16 +57,9 @@
 
 ## 驗收進度
 
-截至 2026-11-22，GitHub Pages 已部署 Gemini 前端與 XP 第一版。XP 尚待功能操作驗收；Gemini Secret 與 Functions 尚未設定及部署，因此 Gemini 呼叫仍不可用。先前對較早版本的初步查看不代表這次更新已完成系統測試。
+截至 2026-11-24，使用者回報不同帳號的行程已分離，並在最新手機登入修正推送後回報登入成功。完整登入／登出／重新載入及待辦、行程、分類的逐項測試仍未有完整紀錄。Firebase AI Logic 已啟用、App Check 已註冊，site key 已加到本機程式；正式網站尚未發佈這次前端修改，Gemini 呼叫尚未驗收。XP 程式已存在但待功能驗收。
 
-尚待完成或補上紀錄：
-
-- 完整驗收桌面與手機的 Google 登入、登出及重新載入後的登入狀態。
-- 逐項測試待辦、行程、分類的新增、編輯、狀態變更、刪除及資料保存。
-- 核對已發布的 Firestore 規則及實際操作，確認不同帳號無法存取彼此資料；第二個真實帳號的網站端測試尚待完成。
-- 記錄功能性測試與至少一次使用者測試的真實結果。
-- 部署 Gemini Functions、在 Firebase Secret Manager 設定 API Key，並完成正式網站端到端驗收。
-- 最後檢查正式網站與交件表單資料。
+接下來的驗收優先順序、Rules Playground 模擬與實際測試的差異，以及本機工具環境問題，請以[開發交接文件](./HANDOFF.md)為準。
 
 經驗值（XP）是 W11 交件後再評估的延伸功能，不列入目前必交範圍。
 
@@ -81,7 +75,7 @@ Firestore 個人資料路徑如下：
 
 `firestore.rules` 限制使用者只能讀寫自己的 UID 路徑。先前進度記錄指出規則曾發布至 Firebase；最近的程式提交沒有重新發布規則，雲端目前狀態應在 Firebase Console 唯讀核對。前端介面本身不能取代資料庫安全規則。
 
-`script.js` 中的 Firebase Web 設定是瀏覽器端公開設定，不是 Gemini 或其他 AI 的私人 API Key。Gemini 僅由 `functions/index.js` 的伺服器端程式呼叫，私人 Key 需透過 Firebase Secret Manager 設定；不可把私人 AI Key 放進前端或公開 Repo，也不可把學校 Gateway 憑證當成 APP 憑證。Gemini 會收到待辦名稱、狀態、截止日、預估時間、難度，以及行程名稱、時間與類別；任務／行程備註不會送出。每位使用者每日最多呼叫 12 次，計數存在後端私有 Firestore 集合。
+`script.js` 中的 Firebase Web 設定與 reCAPTCHA Enterprise site key 都是瀏覽器端公開設定；不可放入 Gemini 私人 API Key。Gemini 透過 Firebase AI Logic 代理呼叫，並以 App Check 保護。不要把學校 Gateway 憑證當成 APP 憑證。Gemini 會收到待辦名稱、狀態、截止日、預估時間、難度，以及行程名稱、時間與類別；任務／行程備註不會送出。免費路線依 Google Gemini Developer API 的模型與用量配額限制，沒有舊 Cloud Function 的每日 12 次伺服器端計數。
 
 本網站使用 Firebase CDN 模組，需要網路連線。請透過本機 HTTP 伺服器或正式 HTTPS 網址開啟，不能直接用 `file://` 執行。
 
@@ -98,22 +92,12 @@ Firestore 個人資料路徑如下：
 - `style.css`：色票、版面、狀態樣式與手機版響應式樣式。
 - `script.js`：Firebase 初始化、登入狀態、頁面互動、待辦與行程操作，以及 Firestore 讀寫。
 - `firestore.rules`：Firestore 使用者 UID 存取規則。
-- `functions/index.js`：驗證登入者、限制 AI 呼叫次數，並在伺服器端呼叫 Gemini。
-- `firebase.json`、`.firebaserc`、`functions/package.json`：Firebase Functions 部署設定。
+- `functions/index.js`：保留的舊版 Cloud Functions Gemini 後端；Spark 免費路線不使用或部署它。
+- `firebase.json`、`.firebaserc`、`functions/package.json`：Firebase Functions 部署設定，免費路線不需部署。
 
-## Gemini Functions 部署
+## Gemini 免費路線設定
 
-此功能目前只有程式碼，尚未建立雲端 Secret 或部署 Function。部署前須先確認 Firebase 專案的 Functions 與 Secret Manager 可用。準備好後，在專案根目錄執行：
-
-```sh
-cd functions
-npm install
-cd ..
-firebase functions:secrets:set GEMINI_API_KEY
-firebase deploy --only functions:generateDailyPlan
-```
-
-CLI 會提示輸入 Secret；不要將 API Key 貼到聊天、README、程式碼或 Repo。以上雲端設定與部署尚未執行。
+在 Firebase Console 的 **AI Services → AI Logic** 啟用 **Gemini Developer API**。接著到 **Security → App Check**，為網站註冊 Fraud Defense (reCAPTCHA Enterprise) provider，並將 `saintlin1116.github.io` 加入 reCAPTCHA key 的允許網域。將 site key 填入 `script.js` 的 `appCheckSiteKey`；Firebase App Check 使用 site key，不需要把 reCAPTCHA secret key 放入網站程式碼或聊天。免費方案由 Firebase AI Logic 管理 Gemini API 金鑰，不需 Secret Manager 或 Cloud Functions 部署。若使用 localhost，另依 Firebase App Check debug provider 設定開發環境。
 
 ## 後續構想
 
