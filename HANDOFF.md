@@ -9,8 +9,8 @@
 - 專案：日常誌個人行程與任務管理系統（課程 Project A）。
 - Repo：`saIntLin1116/w6-first-site`；正式網址：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)。
 - 專案根目錄：Repo 根目錄（本機工作目錄依使用者電腦設定）。
-- 本次查看時位於 `main`，HEAD 與 `origin/main` 同為 `1175a73`（`feat: use Firebase AI Logic for Gemini`）。本地修改含 `index.html`、`script.js`、`style.css`、`README.md`；`HANDOFF.md`、`REQUIREMENTS.md` 未追蹤。尚未 commit、push 或部署。
-- 本次接續排查後，正式 Pages 重測顯示 Gemini 後端 prefill queue 過載；已新增 Gemini 聊天視窗前端與 Firebase AI Logic 呼叫程式，但沒有送出聊天訊息，聊天功能尚未驗收。AI Logic 最近 24 小時監控為 6 筆全失敗，P95 延遲 4.15 分鐘；最新一次正式呼叫在 9.51 秒後回傳 `INTERNAL`，錯誤本文指出高需求及重試用盡。
+- 基準版本為 `1175a73`（`feat: use Firebase AI Logic for Gemini`）。Gemini 對話視窗功能提交 `d0aa88a`（`feat: add Gemini chat window`）已推送至 `main`；GitHub Pages 建置與部署已成功，正式頁已載入該功能的 HTML。此交接文件在部署後再更新；程式視覺與操作、Gemini 對話呼叫仍待驗收。
+- 本次部署核對時，正式 Pages 回傳 HTTP 200，HTML 已包含 `gemini-chat-20261124-1` 資源版本及 Gemini 對話入口。這只確認上線的 HTML，不代表登入後已人工操作或 Gemini 呼叫成功。AI Logic 最近 24 小時監控先前記錄為 6 筆全失敗，P95 延遲 4.15 分鐘；最新一次正式呼叫在 9.51 秒後回傳 `INTERNAL`，錯誤本文指出高需求及重試用盡。這些紀錄不代表目前服務狀態。
 
 ## 專案目標與範圍
 
@@ -32,7 +32,7 @@
 | Gemini 今日規劃 | `script.js` 用 Firebase AI Logic SDK 的 `GoogleAIBackend` 呼叫 Gemini Developer API；App Check 使用 reCAPTCHA Enterprise。Spark 免費路線不使用舊 `functions/index.js`。 | AI Logic 最近 24 小時 6 筆要求皆失敗，成功率和詞元資料不可用，P95 延遲 4.15 分鐘。兩筆最新追蹤本文指出 Gemini 後端 prefill queue 過載且重試用盡（`INTERNAL`），另一筆在 prefill 階段逾時（`DEADLINE_EXCEEDED`）；目前證據明確指向服務端高負載／逾時。App Check 清單有兩筆同名 `Project A Web`，一筆 Fraud Defense 已註冊、一筆未註冊；`script.js` 的 App ID 對應第一筆，AI Logic 概覽確認第一筆已註冊且已強制執行，第二筆未註冊。追蹤沒有 App Check 拒絕證據。正式重測仍失敗，Gemini 未驗收通過。 |
 | XP／等級 | 首次完成待辦加 XP、等級與完成紀錄的程式已存在。 | 使用者操作驗收未完成；不是 W11 第一版必交項目。 |
 | 今日時間線整合當日行程 | 尚未實作。使用者已確認今日時間線要顯示今日待辦及行事曆中日期為今天的行程；行程只從行事曆單向顯示到今日頁，不把今日待辦新增到行事曆。 | 時間線順序、未定時待辦如何安排等細節待確認；見 [REQUIREMENTS.md](./REQUIREMENTS.md)。 |
-| Gemini 對話視窗 | 已加入登入後右下角聊天入口、響應式對話窗、訊息顯示、送出與清除控制；使用 Firebase AI Logic `gemini-3.8-flash`。對話只在頁面記憶體保留，傳送使用者輸入及最近 8 輪對話，不自動附帶 Firestore 任務／行程資料、不寫回 Firestore；登出、切換帳號與重新整理清除。 | HTML、CSS 與呼叫程式已寫入目前工作目錄；尚未開本機或正式網站操作，也未送出聊天訊息。Gemini 後端近期 prefill 過載，待服務恢復後驗收回覆、連續對話、清除與登出清除。 |
+| Gemini 對話視窗 | 已加入登入後右下角聊天入口、響應式對話窗、訊息顯示、送出與清除控制；使用 Firebase AI Logic `gemini-3.8-flash`。對話只在頁面記憶體保留，傳送使用者輸入及最近 8 輪對話，不自動附帶 Firestore 任務／行程資料、不寫回 Firestore；登出、切換帳號與重新整理清除。 | 功能程式已提交並部署；正式 Pages 的 HTML 已確認包含聊天入口。尚未登入後人工操作，也未送出聊天訊息。Gemini 後端近期 prefill 過載，待服務恢復後驗收回覆、連續對話、清除與登出清除。 |
 | AI 改動今日順序／時間 | 尚未實作或定案。 | 待確認可修改欄位、衝突處理及採用前確認流程。 |
 
 ### 已知問題與技術債
@@ -41,7 +41,7 @@
 - 使用者先前曾在終端機回報 `npm`、`firebase` 指令不存在；2026-11-24 已在自己的終端機確認 Node `v26.13.1`、npm `11.20.0`、Firebase CLI `15.37.0` 可執行。Repo 的 Functions runtime 設定為 Node 20；本機 Node 版本與部署 runtime 不同，後續若安裝或部署出現 engine 警告需核對。
 - 使用者提供的最新狀態：Firebase 專案為 Spark；Firebase AI Logic Gemini Developer API 已設定；`script.js` 使用的 Web App ID 對應第一筆 `Project A Web`。專案另有一筆同名但 ID 不同的 Web App。App Check 專頁及 AI Logic 概覽均顯示第一筆已註冊 Fraud Defense 且已強制執行，第二筆未註冊；因此目前正式頁使用的 App ID 對應受保護的 App。使用者回報重播保護關閉、先前 2 個 App Check 要求驗證通過。此 Spark 路線不需 AI Studio API Key、Cloud Functions Secret 或 Functions 部署。
 - Firebase 官方支援模型清單將 `gemini-3.8-flash` 列為穩定模型；目前沒有證據把它判定為失敗原因。
-- AI 失敗的 `catch` 將請求錯誤和 `result.response.text()`／`JSON.parse()` 的回覆處理錯誤混在一起顯示；`console.error` 只輸出 `error.code || error.name`，沒有輸出 `error.message`。本次 Firebase AI Logic 追蹤本文已顯示部分失敗是 Gemini 後端 prefill 排隊過載與完成前逾時。證據支持錯誤發生於服務端推論負載階段；尚不能保證全部 5 筆失敗都同一原因，也不能代表服務現在已恢復。
+- AI 失敗的 `catch` 將請求錯誤和 `result.response.text()`／`JSON.parse()` 的回覆處理錯誤混在一起顯示；`console.error` 只輸出 `error.code || error.name`，沒有輸出 `error.message`。本次 Firebase AI Logic 追蹤本文已顯示部分失敗是 Gemini 後端 prefill 排隊過載與完成前逾時。證據支持錯誤發生於服務端推論負載階段；尚不能保證全部 6 筆失敗都同一原因，也不能代表服務現在已恢復。
 - 舊 Cloud Function `generateDailyPlan` 的預檢 404/CORS 是舊版保留記錄；硬重新載入後的新請求已走 Firebase AI Logic，排查時不要再以舊記錄判讀。
 - 先前查閱 Firebase 官方錯誤排查文件，頁面未列 500／503 專節；Google Cloud Service Health 的 Firebase AI Logic 公開事件頁當時顯示「No incidents reported」。本次專案追蹤本文明示單筆模型高需求及 prefill 逾時；公開健康頁無事件不排除個別模型／請求遇到負載問題。[錯誤排查文件](https://firebase.google.com/docs/ai-logic/error-codes)／[公開服務健康頁](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)
 - 最新登入修正的 Pages 部署狀態，以及 Firebase Console 中現行 Firestore 規則版本，尚未在本次讀取雲端核對。
@@ -95,7 +95,7 @@ npm install
 
 ## 本次工作紀錄（2026-11-24）
 
-- **本次完成事項：** 接續製作 Gemini 對話視窗，檢視目前工作目錄中的入口、聊天窗、送出流程、對話記憶與登入切換清除邏輯；整理 README、需求文件和本交接文件，使聊天功能狀態一致。
-- **驗證結果：** 只做程式碼與文件檢視，未執行測試、未開本機預覽、未從前端送出聊天訊息；因此只確認程式存在，不能宣稱介面或 Gemini 對話已驗收。正式 Pages 舊紀錄顯示 6 筆要求皆失敗，最新追蹤為 Gemini prefill queue 過載。
-- **尚未完成：** 本機視覺／操作檢視；Gemini 回覆、連續對話、清除與登出清除的實際驗收；正式 Pages 尚未載入本次工作目錄修改。工作目錄有 `README.md`、`index.html`、`script.js`、`style.css` 修改，以及未追蹤的 `HANDOFF.md`、`REQUIREMENTS.md`；尚未 commit、push 或部署。
-- **下一步工作：** 先開本機預覽檢視對話窗排版與控制項；待 Gemini 後端恢復後再做端到端對話驗收。完成且檢視後由使用者決定是否 commit、push 或部署。
+- **本次完成事項：** 提交 Gemini 對話視窗與文件（功能提交 `d0aa88a`），推送至 `main`，並完成 GitHub Pages 部署；再更新本交接文件記錄正式頁驗證狀態。
+- **驗證結果：** GitHub Pages workflow run `45356816240` 的 build、status report、deploy jobs 均成功。正式網址回傳 HTTP 200，下載的頁面包含聊天資源版本 `gemini-chat-20261124-1` 與 Gemini 對話入口。未執行自動化測試、未登入後人工操作介面，也未送出 Gemini 聊天訊息；因此部署已確認，聊天互動與模型回覆未驗收。
+- **尚未完成：** 本機／正式頁登入後的桌面與手機介面檢視；回覆、連續對話、清除與登出清除的人工驗收；Gemini 服務恢復後的端到端呼叫驗收。
+- **下一步工作：** 先登入正式 Pages 檢視聊天視窗與控制項，再於 Gemini 後端可用時測試單次回覆、連續對話、清除及登出清除；記下真實結果，不以部署成功代表功能驗收通過。
