@@ -9,7 +9,7 @@
 - 專案：日常誌個人行程與任務管理系統（課程 Project A）。
 - Repo：`saIntLin1116/w6-first-site`；正式網址：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)。
 - 專案根目錄：Repo 根目錄（本機工作目錄依使用者電腦設定）。
-- 最新提交 `2ded7b3`（`feat: add today calendar timeline`）已推送至 `main`，GitHub Pages 部署狀態成功；正式頁 HTTP 200，HTML 已載入 `today-timeline-20261125-1` 版本。這只確認新版已上線，不代表時間線已做畫面或功能驗收。Gemini 對話視窗提交 `d0aa88a`（`feat: add Gemini chat window`）先前亦已部署。2026-11-25 正式頁 Gemini 測試仍失敗；瀏覽器 Console 顯示 `fetch-error`。
+- 時間線程式提交 `2ded7b3`（`feat: add today calendar timeline`）已推送至 `main`，GitHub Pages 部署狀態成功；正式頁 HTTP 200，HTML 已載入 `today-timeline-20261125-1` 版本。這只確認新版已上線，不代表時間線已做畫面或功能驗收。Gemini 對話視窗提交 `d0aa88a`（`feat: add Gemini chat window`）先前亦已部署。2026-11-25 正式頁 Gemini 測試仍失敗；瀏覽器 Console 顯示 `fetch-error`。
 - 2026-11-25 正式頁單次測試的 Console 另顯示 Firebase App Check token 取得 `403 appCheck/initial-throttle`，其後請求被 `appCheck/throttled` 節流，提示約一天後才可再試。唯讀核對 Firebase Console 後，程式使用的 reCAPTCHA Enterprise site key 與註冊值一致；Google Cloud Fraud Defense 顯示同一網站金鑰屬於網站類型，網域為 `saintlin1116.github.io`，狀態為「受保護」。因此目前未見明顯的金鑰不一致或網域漏列，但原始 403 原因仍未知，也沒有證據證明本次 Gemini 請求抵達模型端。先前 AI Logic 上的 `DEADLINE_EXCEEDED`／`SHEDDABLE` 追蹤仍是較早請求，不能當成本次失敗原因。
 
 ## 專案目標與範圍
