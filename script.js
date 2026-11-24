@@ -178,6 +178,9 @@ const geminiChatSendButton = document.querySelector('#gemini-chat-send');
 const scheduleList = document.querySelector('#schedule-list');
 const scheduleCount = document.querySelector('#schedule-count');
 const scheduleEmpty = document.querySelector('#schedule-empty');
+const todayEventList = document.querySelector('#today-event-list');
+const todayScheduleCount = document.querySelector('#today-schedule-count');
+const todayEventEmpty = document.querySelector('#today-event-empty');
 const scheduleForm = document.querySelector('#schedule-form');
 const scheduleFeedback = document.querySelector('#form-feedback');
 const eventDateInput = document.querySelector('#event-date');
@@ -613,6 +616,62 @@ function eventsForDate(dateKey) {
     .sort((a, b) => eventTimeLabel(a).localeCompare(eventTimeLabel(b)));
 }
 
+function todayTimelineEvents() {
+  const today = taipeiDateKey();
+  const eventTime = (event) => event.startTime || event.time || '';
+  const eventGroup = (event) => event.allDay ? 0 : eventTime(event) ? 1 : 2;
+  return schedules
+    .filter((event) => event.date === today)
+    .sort((a, b) => {
+      const groupDifference = eventGroup(a) - eventGroup(b);
+      if (groupDifference) return groupDifference;
+      if (eventGroup(a) === 1) {
+        const startDifference = eventTime(a).localeCompare(eventTime(b));
+        if (startDifference) return startDifference;
+      }
+      return eventTimeLabel(a).localeCompare(eventTimeLabel(b)) || a.id.localeCompare(b.id);
+    });
+}
+
+function renderTodayTimelineEvents() {
+  const todayEvents = todayTimelineEvents();
+  todayEventList.replaceChildren();
+  todayEvents.forEach((item) => {
+    const row = document.createElement('li');
+    row.className = 'today-event-item';
+    const track = document.createElement('div');
+    track.className = 'today-event-track';
+    const time = document.createElement('time');
+    time.textContent = eventTimeLabel(item);
+    const dot = document.createElement('span');
+    dot.className = 'today-event-dot';
+    const color = eventCategoryColor(item.category);
+    row.style.setProperty('--category-color', color);
+    track.append(time, dot);
+
+    const copy = document.createElement('div');
+    copy.className = 'today-event-copy';
+    const title = document.createElement('h5');
+    title.textContent = item.name;
+    copy.append(title);
+    if (item.note) {
+      const note = document.createElement('p');
+      note.textContent = item.note;
+      copy.append(note);
+    }
+
+    const tag = document.createElement('span');
+    tag.className = `event-tag tag-${item.style || 'other'}`;
+    tag.style.backgroundColor = color;
+    tag.style.color = categoryTextColor(color);
+    tag.textContent = item.category || '行程';
+    row.append(track, copy, tag);
+    todayEventList.append(row);
+  });
+  updateCount(todayScheduleCount, todayEvents.length, '個行程');
+  todayEventEmpty.hidden = todayEvents.length > 0 || !currentUser;
+}
+
 function eventCategoryColor(category = '其他') {
   const name = String(category || '其他').trim() || '其他';
   const savedCategory = categories.find((item) => item.name === name);
@@ -783,6 +842,7 @@ function renderSchedules() {
   });
   updateCount(scheduleCount, selectedEvents.length, '個安排');
   scheduleEmpty.hidden = selectedEvents.length > 0 || !currentUser;
+  renderTodayTimelineEvents();
   renderCalendar();
 }
 

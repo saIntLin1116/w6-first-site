@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=gemini-chat-20261124-1">
-  <script type="module" src="script.js?v=gemini-chat-20261124-1"></script>
+  <link rel="stylesheet" href="style.css?v=today-timeline-20261125-1">
+  <script type="module" src="script.js?v=today-timeline-20261125-1"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -47,7 +47,6 @@
       <section class="workspace-view" id="today-view" aria-labelledby="today-view-title">
         <div class="section-heading page-heading">
           <div><p class="section-kicker">YOUR DAY</p><h2 id="today-view-title">今日要推進的事</h2></div>
-          <span class="count-pill" id="today-count">0 項任務</span>
         </div>
         <section class="xp-card" aria-labelledby="xp-title">
           <div class="xp-card-heading">
@@ -63,19 +62,43 @@
             <p id="xp-history-empty">還沒有完成紀錄。</p>
           </details>
         </section>
-        <section class="spotlight-card" id="next-task-card" aria-live="polite" hidden>
-          <p class="spotlight-label">現在先做這一件</p>
-          <h3 id="next-task-name"></h3>
-          <p id="next-task-detail"></p>
-          <div class="spotlight-actions">
-            <button class="small-button is-primary" id="complete-next-task" type="button">標記完成</button>
-            <button class="small-button" id="edit-next-task" type="button">編輯資訊</button>
-            <button class="small-button" id="return-next-task" type="button">移回清單</button>
+        <section class="panel today-timeline-panel" aria-labelledby="today-timeline-title">
+          <div class="section-heading today-timeline-heading">
+            <div>
+              <p class="section-kicker">TODAY TIMELINE</p>
+              <h3 id="today-timeline-title">今日時間線</h3>
+              <p class="today-timeline-description">待辦依排序獨立顯示、不設定開始時間；行程沿用行事曆時間，不建立重複資料。</p>
+            </div>
           </div>
+          <section class="today-timeline-group" aria-labelledby="today-tasks-title">
+            <div class="section-heading today-timeline-group-heading">
+              <h4 id="today-tasks-title">今日待辦</h4>
+              <span class="count-pill" id="today-count">0 項任務</span>
+            </div>
+            <section class="spotlight-card" id="next-task-card" aria-live="polite" hidden>
+              <p class="spotlight-label">現在先做這一件</p>
+              <h3 id="next-task-name"></h3>
+              <p id="next-task-detail"></p>
+              <div class="spotlight-actions">
+                <button class="small-button is-primary" id="complete-next-task" type="button">標記完成</button>
+                <button class="small-button" id="edit-next-task" type="button">編輯資訊</button>
+                <button class="small-button" id="return-next-task" type="button">移回清單</button>
+              </div>
+            </section>
+            <p class="empty-message" id="today-empty" hidden>今天還沒有待辦。可以從清單挑選任務加入今天。</p>
+            <h5 class="subsection-title" id="later-tasks-title" hidden>其他待辦</h5>
+            <ul class="task-list task-list-large" id="today-task-list" aria-live="polite"></ul>
+          </section>
+          <section class="today-timeline-group" aria-labelledby="today-events-title">
+            <div class="section-heading today-timeline-group-heading">
+              <h4 id="today-events-title">行事曆行程</h4>
+              <span class="count-pill" id="today-schedule-count">0 個行程</span>
+            </div>
+            <p class="today-events-hint">全天與未設定時間的行程會另外標示；有開始時間的行程依時間排列。</p>
+            <ol class="today-event-list" id="today-event-list" aria-live="polite"></ol>
+            <p class="empty-message" id="today-event-empty" hidden>今天沒有行事曆行程。</p>
+          </section>
         </section>
-        <p class="empty-message" id="today-empty" hidden>今天還沒有安排任務。可以從清單挑選一件開始。</p>
-        <h3 class="subsection-title" id="later-tasks-title" hidden>接下來</h3>
-        <ul class="task-list task-list-large" id="today-task-list" aria-live="polite"></ul>
         <section class="panel ai-plan-panel" aria-labelledby="ai-plan-title">
           <div class="section-heading form-heading">
             <div><p class="section-kicker">GEMINI ASSISTANT</p><h3 id="ai-plan-title">今日規劃建議</h3></div>

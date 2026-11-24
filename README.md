@@ -22,6 +22,7 @@
 - 待辦可加入今日、移回清單，並在今日畫面上移或下移調整順序。
 - 狀態包含「未開始、進行中、已完成」；點選狀態可切換，清單中的進行中待辦也可退回未開始。
 - 今日畫面會把排序第一項放在「現在先做這一件」，可直接標記完成、編輯資訊或移回清單。
+- 今日時間線會同時顯示今日待辦與行事曆的今日行程；待辦保留原排序和預估時長、不編固定時間，行程單向顯示且沿用分類顏色。此功能程式已加入本機工作目錄，尚未操作驗收或部署。
 - 可為待辦設定選填的截止日期、預估分鐘、主觀難度與備註。
 - 已完成待辦會收在完成紀錄中，可恢復為待辦。
 - 清單顯示未安排待辦數量，今日畫面顯示今日任務數量。
@@ -44,7 +45,7 @@
 - 使用模型 `gemini-3.8-flash`；Firebase 官方模型清單列為穩定模型。可用模型及請求量仍受 Google 配額限制。
 - 正式 Pages 已載入 Firebase AI Logic 路線，但使用者實測呼叫失敗；詳見下方驗收狀態。App Check 已註冊並強制基本驗證。
 - 已新增登入後顯示的 Gemini 對話視窗，使用同一 Firebase AI Logic 後端。聊天只傳送使用者輸入的文字與最近 8 輪對話，不會自動附帶待辦／行程，也不寫入 Firestore；登出或重新整理會清除。
-- 聊天視窗已隨 `d0aa88a` 部署到正式 Pages；已確認頁面回傳成功且含聊天入口，但尚未登入後操作或取得 Gemini 回覆。先前服務端有 prefill 過載紀錄，對話功能仍待端到端驗收。
+- 聊天視窗已隨 `d0aa88a` 部署到正式 Pages。2026-11-24 登入後送出一般測試訊息，頁面顯示無法回覆；聊天功能尚未驗收成功。
 
 ### 經驗值與等級
 
@@ -60,9 +61,9 @@
 
 ## 驗收進度
 
-截至 2026-11-24，使用者回報不同帳號的行程已分離，並在最新手機登入修正推送後回報登入成功。完整登入／登出／重新載入及待辦、行程、分類的逐項測試仍未有完整紀錄。正式 Pages 的 Gemini 呼叫已確認送到 Firebase AI Logic `gemini-3.8-flash:generateContent`。最近 24 小時監控有 6 筆要求且全數失敗，成功率與詞元資料不可用，P95 延遲 4.15 分鐘。最新正式重測於 9.51 秒後回傳 `INTERNAL`；追蹤本文再次指出 Gemini 後端 prefill queue 過載、重試用盡並建議稍後再試。另一筆在 prefill 完成前逾時、端點標示 `SHEDDABLE`。目前證據指向服務端高負載／逾時，Gemini 尚未驗收通過。App Check 清單有兩筆同名 `Project A Web`（一筆已註冊、一筆未註冊）；程式使用的 ID 對應已註冊且強制執行的第一筆。舊 Cloud Function `generateDailyPlan` 的 404/CORS 與新版呼叫無關。XP 程式已存在但待功能驗收。
+截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。今日時間線已在本機程式加入，但尚未本機預覽、操作驗收或部署。正式 Pages 已部署 Gemini 對話視窗；最新聊天與今日建議測試均失敗，Console 記錄 `fetch-error` 和 App Check token 的 `403 appCheck/initial-throttle`／`appCheck/throttled`。Firebase Console 註冊的 site key 與程式一致，Google Cloud Fraud Defense 金鑰也列出正式網站網域並顯示受保護；403 原始原因仍待查，也未確認本次請求是否抵達 AI Logic。先前 AI Logic 的過載／逾時 trace 不可直接歸因到本次測試。Gemini 兩項功能仍未驗收通過。XP 程式已存在但待功能驗收。
 
-目前 `script.js` 的錯誤處理只記錄 SDK 的 `error.code` 或 `error.name`，未記錄 `error.message`；且也會把回覆文字／JSON 解析失敗顯示成相同訊息。連續追蹤與最新一次正式重測都顯示 Gemini 後端 prefill 過載，沒有成功回覆。下一步是等服務負載恢復後，再從正式 Pages 只送出一次測試並核對追蹤是否成功；若仍失敗，查看新追蹤錯誤本文。若後續需要改程式，應將錯誤分類及畫面提示分開，且不要記錄任務內容、Token 或 Headers。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Google Cloud Firebase AI Logic 服務健康](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)。不可分享 Request Headers、Cookie、App Check token 或私人資料。
+下一步從 Chrome Network 面板取得 App Check 403 的 response status/message（不分享 Headers、Cookie、Token 或完整 payload）；不要重設已核對相符的 site key／網域，也避免在節流期間反覆重試。節流解除後再各做一次受控 Gemini 測試，對照 AI Logic trace。`script.js` 現在只記錄 SDK 錯誤代碼／名稱，尚未記錄錯誤訊息；必要時再補安全遮蔽後的訊息摘要。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Google Cloud Firebase AI Logic 服務健康](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)。不可分享 Request Headers、Cookie、App Check token 或私人資料。
 
 接下來的 Gemini 錯誤排查步驟、Rules Playground 模擬與實際測試的差異，以及其他待辦，請以[開發交接文件](./HANDOFF.md)為準。
 
