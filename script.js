@@ -95,6 +95,20 @@ const dailyPlanModel = getGenerativeModel(ai, {
     maxOutputTokens: 1800,
   },
 });
+const geminiChatModel = getGenerativeModel(ai, {
+  model: 'gemini-3.8-flash',
+  systemInstruction: [
+    '你是日常誌中的繁體中文對話助理。',
+    '以清楚、友善、精簡的方式回答使用者；除非使用者要求其他語言，否則使用繁體中文。',
+    '你只能依據本對話中使用者明確提供的內容回答；你無法查看日常誌的待辦、行程、帳號或 Firestore。',
+    '不要聲稱已替使用者修改、保存或安排任何資料；你只提供文字建議。',
+    '如果資訊不足或涉及即時資訊，清楚說明限制並提出必要的澄清問題。',
+  ].join('\n'),
+  generationConfig: {
+    temperature: 0.7,
+    maxOutputTokens: 900,
+  },
+});
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -152,6 +166,15 @@ const aiPlanResults = document.querySelector('#ai-plan-results');
 const aiPlanSummary = document.querySelector('#ai-plan-summary');
 const aiPlanPriorities = document.querySelector('#ai-plan-priorities');
 const aiPlanSuggestions = document.querySelector('#ai-plan-suggestions');
+const geminiChatLauncher = document.querySelector('#gemini-chat-launcher');
+const geminiChatDialog = document.querySelector('#gemini-chat-dialog');
+const geminiChatCloseButton = document.querySelector('#gemini-chat-close');
+const geminiChatClearButton = document.querySelector('#gemini-chat-clear');
+const geminiChatMessages = document.querySelector('#gemini-chat-messages');
+const geminiChatStatus = document.querySelector('#gemini-chat-status');
+const geminiChatForm = document.querySelector('#gemini-chat-form');
+const geminiChatInput = document.querySelector('#gemini-chat-input');
+const geminiChatSendButton = document.querySelector('#gemini-chat-send');
 const scheduleList = document.querySelector('#schedule-list');
 const scheduleCount = document.querySelector('#schedule-count');
 const scheduleEmpty = document.querySelector('#schedule-empty');
@@ -212,6 +235,10 @@ let tasksReady = false;
 let eventsReady = false;
 let aiPlanPending = false;
 let aiPlanRequestId = 0;
+let geminiChatHistory = [];
+let geminiChatPending = false;
+let geminiChatRequestId = 0;
+let geminiChatOwnerUid = null;
 let xpStats = { totalXp: 0, completedCount: 0 };
 
 function taipeiDateKey(date = new Date()) {
@@ -332,6 +359,44 @@ function updateAiPlanButton() {
   }
 }
 
+function updateGeminiChatControls() {
+  geminiChatLauncher.hidden = !currentUser;
+  geminiChatInput.disabled = !currentUser;
+  geminiChatSendButton.disabled = !currentUser || geminiChatPending;
+  geminiChatClearButton.disabled = geminiChatPending || geminiChatHistory.length === 0;
+}
+
+function appendGeminiChatMessage(role, message) {
+  const article = document.createElement('article');
+  article.className = `gemini-chat-message is-${role}`;
+  const speaker = document.createElement('span');
+  speaker.className = 'gemini-chat-speaker';
+  speaker.textContent = role === 'user' ? '你' : 'Gemini';
+  const text = document.createElement('p');
+  text.textContent = message;
+  article.append(speaker, text);
+  geminiChatMessages.append(article);
+  geminiChatMessages.scrollTop = geminiChatMessages.scrollHeight;
+  return article;
+}
+
+function resetGeminiChat(ownerUid = null, closeDialog = false) {
+  geminiChatRequestId += 1;
+  geminiChatPending = false;
+  geminiChatHistory = [];
+  geminiChatOwnerUid = ownerUid;
+  geminiChatInput.value = '';
+  geminiChatSendButton.textContent = '送出';
+  geminiChatMessages.replaceChildren();
+  const welcome = document.createElement('p');
+  welcome.className = 'gemini-chat-welcome';
+  welcome.textContent = '嗨！你可以問我時間管理、待辦拆解或一般問題。若要我參考行程，請在訊息中自行提供相關內容。';
+  geminiChatMessages.append(welcome);
+  geminiChatStatus.textContent = '';
+  if (closeDialog && geminiChatDialog.open) geminiChatDialog.close();
+  updateGeminiChatControls();
+}
+
 function setActiveView(viewName) {
   Object.entries(views).forEach(([name, element]) => {
     element.hidden = name !== viewName;
@@ -355,6 +420,7 @@ function setSignedOutView(message = '請使用 Google 登入以查看個人資�
   stopXpListener = null;
   stopCompletionHistoryListener = null;
   currentUser = null;
+  resetGeminiChat(null, true);
   tasks = [];
   schedules = [];
   categories = [];
@@ -794,6 +860,8 @@ function startUserData(user) {
   stopXpListener?.();
   stopCompletionHistoryListener?.();
   currentUser = user;
+  if (geminiChatOwnerUid !== user.uid) resetGeminiChat(user.uid, true);
+  else updateGeminiChatControls();
   dashboard.hidden = false;
   loginPrompt.hidden = true;
   authButton.hidden = true;
@@ -1159,6 +1227,72 @@ function isIosSignInEnvironment() {
   return /iPhone|iPad|iPod/i.test(userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
+geminiChatLauncher.addEventListener('click', () => {
+  if (!currentUser) return;
+  geminiChatDialog.showModal();
+  geminiChatInput.focus();
+});
+
+geminiChatCloseButton.addEventListener('click', () => geminiChatDialog.close());
+
+geminiChatDialog.addEventListener('click', (event) => {
+  if (event.target === geminiChatDialog) geminiChatDialog.close();
+});
+
+geminiChatClearButton.addEventListener('click', () => {
+  if (!currentUser || geminiChatPending) return;
+  resetGeminiChat(currentUser.uid);
+  geminiChatStatus.textContent = '對話已清除。';
+});
+
+geminiChatForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!currentUser || geminiChatPending) return;
+  if (!appCheck) {
+    geminiChatStatus.textContent = 'Gemini 尚未完成 App Check 設定。';
+    return;
+  }
+
+  const message = geminiChatInput.value.trim();
+  if (!message) return;
+  const requestId = ++geminiChatRequestId;
+  const requestedByUid = currentUser.uid;
+  const userMessage = appendGeminiChatMessage('user', message);
+  geminiChatPending = true;
+  geminiChatStatus.textContent = 'Gemini 正在回覆…';
+  geminiChatSendButton.textContent = '回覆中…';
+  updateGeminiChatControls();
+
+  try {
+    const chat = geminiChatModel.startChat({ history: geminiChatHistory });
+    const result = await chat.sendMessage(message);
+    if (requestId !== geminiChatRequestId || currentUser?.uid !== requestedByUid) return;
+    const answer = result.response.text().trim();
+    if (!answer) throw new Error('Gemini returned an empty response.');
+
+    geminiChatHistory.push(
+      { role: 'user', parts: [{ text: message }] },
+      { role: 'model', parts: [{ text: answer }] },
+    );
+    geminiChatHistory = geminiChatHistory.slice(-16);
+    appendGeminiChatMessage('model', answer);
+    geminiChatInput.value = '';
+    geminiChatStatus.textContent = '回覆完成。';
+  } catch (error) {
+    console.error('Gemini 對話失敗：', error.code || error.name || 'unknown');
+    if (requestId !== geminiChatRequestId || currentUser?.uid !== requestedByUid) return;
+    userMessage.remove();
+    geminiChatStatus.textContent = 'Gemini 目前無法回覆，訊息已留在輸入框；稍後可再試。';
+    geminiChatInput.focus();
+  } finally {
+    if (requestId === geminiChatRequestId) {
+      geminiChatPending = false;
+      geminiChatSendButton.textContent = '送出';
+      updateGeminiChatControls();
+    }
+  }
+});
 
 generatePlanButton.addEventListener('click', async () => {
   if (!currentUser || aiPlanPending) return;

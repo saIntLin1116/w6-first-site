@@ -335,3 +335,38 @@ input:focus,.edit-dialog input:focus,.edit-dialog select:focus,.edit-dialog text
 .timeline-dot{border-color:var(--category-color,var(--slate));background:var(--category-color,var(--slate))}
 .nav-button:focus-visible,.calendar-day:focus-visible,.calendar-nav-button:focus-visible{outline-color:var(--red)}
 @media(max-width:700px){.main-nav{background:var(--surface)}.calendar-panel{background:var(--surface)}}
+
+.gemini-chat-launcher{position:fixed;z-index:20;right:24px;bottom:22px;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:52px;padding:0 18px;border:1px solid #ffffff55;border-radius:28px;background:var(--red);box-shadow:0 8px 26px #0005;color:var(--surface);font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:transform .15s,background .15s,box-shadow .15s}
+.gemini-chat-launcher:hover{transform:translateY(-2px);background:#8e0611;box-shadow:0 11px 30px #0006}
+.gemini-chat-launcher:focus-visible,.gemini-chat-close:focus-visible,.gemini-chat-clear:focus-visible,.gemini-chat-form button:focus-visible{outline:3px solid var(--slate);outline-offset:3px}
+.gemini-chat-launcher svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.8}
+.gemini-chat-launcher[hidden]{display:none}
+.gemini-chat-dialog{position:fixed;inset:auto 24px 88px auto;width:min(500px,calc(100vw - 32px));height:min(700px,calc(100dvh - 120px));max-width:none;max-height:none;margin:0;padding:0;overflow:hidden;border:1px solid var(--slate);border-radius:20px;background:var(--surface);box-shadow:0 18px 58px #0008;color:var(--navy)}
+.gemini-chat-dialog::backdrop{background:#080b11a8;backdrop-filter:blur(3px)}
+.gemini-chat-panel{display:flex;width:100%;height:100%;min-height:0;flex-direction:column;padding:22px}
+.gemini-chat-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.gemini-chat-header .section-kicker{margin:0 0 4px;color:var(--red)}
+.gemini-chat-header h2{color:var(--navy);font-size:18px}
+.gemini-chat-header-actions{display:flex;align-items:center;gap:7px}
+.gemini-chat-clear{min-height:33px;padding:0 9px;font-size:10px}
+.gemini-chat-clear:disabled{cursor:not-allowed;opacity:.55}
+.gemini-chat-close{width:31px;height:31px;flex:0 0 31px;color:var(--navy);font-size:22px;opacity:1}
+.gemini-chat-disclosure{margin:0 0 12px;color:#435064;font-size:11px;line-height:1.55}
+.gemini-chat-messages{display:flex;min-height:170px;flex:1;flex-direction:column;gap:10px;overflow:auto;padding:15px;border:1px solid #7B8DA655;border-radius:14px;background:#f4f2f3;overscroll-behavior:contain}
+.gemini-chat-welcome,.gemini-chat-message{max-width:88%;margin:0;padding:10px 12px;border:1px solid #7B8DA633;border-radius:14px 14px 14px 4px;background:#fff;color:var(--navy);font-size:13px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap}
+.gemini-chat-message{display:flex;flex-direction:column;gap:3px}
+.gemini-chat-message.is-user{align-self:flex-end;border-color:var(--red);border-radius:14px 14px 4px 14px;background:var(--red);color:#fff}
+.gemini-chat-speaker{font-size:9px;font-weight:700;letter-spacing:.04em;opacity:.78}
+.gemini-chat-message p{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.gemini-chat-status{min-height:1.5em;margin:8px 0;color:#526173;font-size:10px;line-height:1.5}
+.gemini-chat-form{display:flex;flex-direction:column;gap:8px}
+.gemini-chat-form textarea{width:100%;min-height:64px;max-height:140px;padding:10px 12px;border:1px solid var(--slate);border-radius:11px;outline:none;resize:vertical;background:#fff;color:var(--navy);font:inherit;font-size:13px;line-height:1.5}
+.gemini-chat-form textarea::placeholder{color:#6b788a}
+.gemini-chat-form textarea:focus{border-color:var(--red);box-shadow:0 0 0 3px #B3071533}
+.gemini-chat-form textarea:disabled{opacity:.65}
+.gemini-chat-form-footer{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gemini-chat-form-footer span{color:#526173;font-size:9px;line-height:1.4}
+.gemini-chat-form button{min-height:35px;padding:0 14px;font-size:11px}
+.gemini-chat-form button:disabled{cursor:wait;opacity:.6}
+@media(max-width:700px){.gemini-chat-launcher{right:16px;bottom:max(16px,env(safe-area-inset-bottom));min-height:48px;padding:0 15px;font-size:12px}.gemini-chat-dialog{inset:auto 10px max(10px,env(safe-area-inset-bottom));width:calc(100vw - 20px);height:min(720px,calc(100dvh - 20px));border-radius:18px}.gemini-chat-panel{padding:17px}.gemini-chat-messages{min-height:120px;padding:12px}}
+@media(max-width:390px){.gemini-chat-launcher{right:12px;bottom:max(12px,env(safe-area-inset-bottom));min-height:46px;padding:0 13px}.gemini-chat-dialog{inset:auto 6px max(6px,env(safe-area-inset-bottom));width:calc(100vw - 12px);height:calc(100dvh - 12px)}.gemini-chat-panel{padding:15px}.gemini-chat-disclosure{font-size:10px}.gemini-chat-message,.gemini-chat-welcome{max-width:94%;font-size:12px}}

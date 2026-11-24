@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=xp-20261122-1">
-  <script type="module" src="script.js?v=xp-20261122-1"></script>
+  <link rel="stylesheet" href="style.css?v=gemini-chat-20261124-1">
+  <script type="module" src="script.js?v=gemini-chat-20261124-1"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -168,6 +168,38 @@
         </section>
       </section>
     </div>
+
+    <button class="gemini-chat-launcher" id="gemini-chat-launcher" type="button" hidden aria-haspopup="dialog" aria-controls="gemini-chat-dialog">
+      <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false"><path d="M5 18.5 3.8 21l3.7-1.1a9 9 0 1 0-2.5-1.4Z"/><path d="M8 10h8M8 14h5"/></svg>
+      <span>Gemini 對話</span>
+    </button>
+    <dialog class="gemini-chat-dialog" id="gemini-chat-dialog" aria-labelledby="gemini-chat-title">
+      <section class="gemini-chat-panel">
+        <header class="gemini-chat-header">
+          <div>
+            <p class="section-kicker">GEMINI CHAT</p>
+            <h2 id="gemini-chat-title">和 Gemini 聊聊</h2>
+          </div>
+          <div class="gemini-chat-header-actions">
+            <button class="small-button gemini-chat-clear" id="gemini-chat-clear" type="button" disabled>清除對話</button>
+            <button class="delete-button gemini-chat-close" id="gemini-chat-close" type="button" aria-label="關閉 Gemini 對話">×</button>
+          </div>
+        </header>
+        <p class="gemini-chat-disclosure">只會傳送你輸入的文字和最近 8 輪對話，不會讀取或修改今日待辦、行程，也不會寫入 Firestore。重新整理或登出後，對話會清除。</p>
+        <div class="gemini-chat-messages" id="gemini-chat-messages" role="log" aria-label="Gemini 對話內容" aria-live="polite" aria-relevant="additions text">
+          <p class="gemini-chat-welcome" id="gemini-chat-welcome">嗨！你可以問我時間管理、待辦拆解或一般問題。若要我參考行程，請在訊息中自行提供相關內容。</p>
+        </div>
+        <p class="gemini-chat-status" id="gemini-chat-status" role="status" aria-live="polite"></p>
+        <form class="gemini-chat-form" id="gemini-chat-form">
+          <label class="visually-hidden" for="gemini-chat-input">輸入訊息</label>
+          <textarea id="gemini-chat-input" name="message" rows="2" maxlength="2000" placeholder="輸入訊息…（最多 2,000 字）" required></textarea>
+          <div class="gemini-chat-form-footer">
+            <span>AI 回覆可能不完全正確，請自行判斷。</span>
+            <button class="small-button is-primary" id="gemini-chat-send" type="submit">送出</button>
+          </div>
+        </form>
+      </section>
+    </dialog>
 
     <dialog class="edit-dialog" id="task-edit-dialog" aria-labelledby="edit-dialog-title">
       <form id="task-edit-form">

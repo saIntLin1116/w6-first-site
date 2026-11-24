@@ -41,7 +41,10 @@
 - 使用者按下「整理今日安排」才會送出資料；待辦備註和行程備註不會送出。
 - 建議只供參考，不會自動改動待辦、不會寫回 Firestore，也不會保存 AI 回覆。
 - 透過 Firebase AI Logic 的 Gemini Developer API 及 App Check 呼叫 Gemini；私人 Gemini API Key 不放入前端或 Repo。
-- 免費方案使用 Spark 上的 Gemini Developer API 免費額度；可用模型與請求量受 Google 配額限制。Firebase AI Logic 已啟用，App Check 已註冊；仍待正式網站發佈與端到端驗收。
+- 使用模型 `gemini-3.8-flash`；Firebase 官方模型清單列為穩定模型。可用模型及請求量仍受 Google 配額限制。
+- 正式 Pages 已載入 Firebase AI Logic 路線，但使用者實測呼叫失敗；詳見下方驗收狀態。App Check 已註冊並強制基本驗證。
+- 已新增登入後顯示的 Gemini 對話視窗，使用同一 Firebase AI Logic 後端。聊天只傳送使用者輸入的文字與最近 8 輪對話，不會自動附帶待辦／行程，也不寫入 Firestore；登出或重新整理會清除。
+- 聊天視窗程式已完成，Gemini 服務目前有後端過載錯誤，對話功能尚未實際驗收。
 
 ### 經驗值與等級
 
@@ -57,9 +60,11 @@
 
 ## 驗收進度
 
-截至 2026-11-24，使用者回報不同帳號的行程已分離，並在最新手機登入修正推送後回報登入成功。完整登入／登出／重新載入及待辦、行程、分類的逐項測試仍未有完整紀錄。Firebase AI Logic 已啟用、App Check 已註冊，site key 已加到本機程式；正式網站尚未發佈這次前端修改，Gemini 呼叫尚未驗收。XP 程式已存在但待功能驗收。
+截至 2026-11-24，使用者回報不同帳號的行程已分離，並在最新手機登入修正推送後回報登入成功。完整登入／登出／重新載入及待辦、行程、分類的逐項測試仍未有完整紀錄。正式 Pages 的 Gemini 呼叫已確認送到 Firebase AI Logic `gemini-3.8-flash:generateContent`。最近 24 小時監控有 6 筆要求且全數失敗，成功率與詞元資料不可用，P95 延遲 4.15 分鐘。最新正式重測於 9.51 秒後回傳 `INTERNAL`；追蹤本文再次指出 Gemini 後端 prefill queue 過載、重試用盡並建議稍後再試。另一筆在 prefill 完成前逾時、端點標示 `SHEDDABLE`。目前證據指向服務端高負載／逾時，Gemini 尚未驗收通過。App Check 清單有兩筆同名 `Project A Web`（一筆已註冊、一筆未註冊）；程式使用的 ID 對應已註冊且強制執行的第一筆。舊 Cloud Function `generateDailyPlan` 的 404/CORS 與新版呼叫無關。XP 程式已存在但待功能驗收。
 
-接下來的驗收優先順序、Rules Playground 模擬與實際測試的差異，以及本機工具環境問題，請以[開發交接文件](./HANDOFF.md)為準。
+目前 `script.js` 的錯誤處理只記錄 SDK 的 `error.code` 或 `error.name`，未記錄 `error.message`；且也會把回覆文字／JSON 解析失敗顯示成相同訊息。連續追蹤與最新一次正式重測都顯示 Gemini 後端 prefill 過載，沒有成功回覆。下一步是等服務負載恢復後，再從正式 Pages 只送出一次測試並核對追蹤是否成功；若仍失敗，查看新追蹤錯誤本文。若後續需要改程式，應將錯誤分類及畫面提示分開，且不要記錄任務內容、Token 或 Headers。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Google Cloud Firebase AI Logic 服務健康](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)。不可分享 Request Headers、Cookie、App Check token 或私人資料。
+
+接下來的 Gemini 錯誤排查步驟、Rules Playground 模擬與實際測試的差異，以及其他待辦，請以[開發交接文件](./HANDOFF.md)為準。
 
 經驗值（XP）是 W11 交件後再評估的延伸功能，不列入目前必交範圍。
 
