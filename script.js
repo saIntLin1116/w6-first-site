@@ -223,19 +223,29 @@ const eventEditFeedback = document.querySelector('#edit-event-feedback');
 const eventEditRepeatNotice = document.querySelector('#edit-event-repeat-notice');
 const categoryManagerDialog = document.querySelector('#category-manager-dialog');
 const categoryManagerForm = document.querySelector('#category-manager-form');
+const categoryManagerTitle = document.querySelector('#category-manager-title');
 const managedCategorySelect = document.querySelector('#managed-category-select');
+const managedCategorySelectField = managedCategorySelect.closest('.field');
 const managedCategoryEmpty = document.querySelector('#managed-category-empty');
 const categoryManagerFields = document.querySelector('#category-manager-fields');
 const managedCategoryName = document.querySelector('#managed-category-name');
 const managedCategoryColor = document.querySelector('#managed-category-color');
 const categoryManagerFeedback = document.querySelector('#category-manager-feedback');
 const deleteManagedCategoryButton = document.querySelector('#delete-managed-category');
+const saveManagedCategoryButton = document.querySelector('#save-managed-category');
+const categoryDeleteConfirm = document.querySelector('#category-delete-confirm');
+const categoryDeleteWarning = document.querySelector('#category-delete-warning');
+const cancelCategoryDeleteButton = document.querySelector('#cancel-category-delete');
+const confirmCategoryDeleteButton = document.querySelector('#confirm-category-delete');
 const timePickerDialog = document.querySelector('#time-picker-dialog');
 const timePickerHour = document.querySelector('#time-picker-hour');
 const timePickerMinute = document.querySelector('#time-picker-minute');
 const timePickerConfirm = document.querySelector('#time-picker-confirm');
 let timePickerTarget = null;
 let activeTimelineDrag = null;
+let categoryManagerMode = 'manage';
+let categoryManagerTarget = null;
+let categoryPendingDeletionName = null;
 
 const statusLabels = { pending: '未開始', progress: '進行中', done: '已完成' };
 const difficultyLabels = { low: '低', medium: '中', high: '高' };
@@ -611,8 +621,10 @@ function renderTaskRow(task, location, position = 0, total = 0, completionSource
   const title = document.createElement('h3');
   title.textContent = task.name;
   if (task.status === 'done') title.classList.add('is-complete');
+  const detailText = taskDetail(task);
   const note = document.createElement('p');
-  note.textContent = taskDetail(task);
+  note.textContent = detailText;
+  if (detailText === '尚未設定其他資訊') note.classList.add('task-empty-detail');
   copy.append(title, note);
   if (location === 'completed') {
     const completedDate = getTimestamp(task.completedAt)
@@ -893,12 +905,31 @@ function renderTodayTimeline() {
 
 function eventCategoryColor(category = '其他') {
   const name = String(category || '其他').trim() || '其他';
-  const savedCategory = categories.find((item) => item.name === name);
+  const savedCategory = categories.find((item) => item.name === name && !item.deleted);
   if (savedCategory && /^#[0-9a-f]{6}$/i.test(savedCategory.color || '')) return savedCategory.color;
   if (defaultCategoryColors[name]) return defaultCategoryColors[name];
   let hash = 0;
   for (const character of name) hash = (hash * 31 + character.codePointAt(0)) >>> 0;
   return eventCategoryPalette[hash % eventCategoryPalette.length];
+}
+
+function deletedEventCategoryNames() {
+  return new Set(categories.filter((item) => item.deleted === true).map((item) => item.name));
+}
+
+function activeEventCategoryNames() {
+  const deletedNames = deletedEventCategoryNames();
+  return [...new Set([
+    ...defaultEventCategories.filter((name) => !deletedNames.has(name)),
+    ...categories.filter((item) => item.name && !item.deleted).map((item) => item.name),
+    ...schedules.map((item) => String(item.category || '').trim()).filter((name) => name && !deletedNames.has(name)),
+    ...[...pendingCategoryNames].filter((name) => !deletedNames.has(name)),
+  ])];
+}
+
+function fallbackEventCategory(excludingName = '') {
+  const alternatives = activeEventCategoryNames().filter((name) => name !== excludingName);
+  return alternatives.includes('其他') ? '其他' : (alternatives[0] || '');
 }
 
 function categoryTextColor(hexColor) {
@@ -911,16 +942,11 @@ function categoryTextColor(hexColor) {
 }
 
 function refreshEventCategoryOptions() {
-  const savedNames = new Set(categories.map((item) => item.name));
+  const savedNames = new Set(categories.filter((item) => !item.deleted).map((item) => item.name));
   pendingCategoryNames.forEach((name) => {
     if (savedNames.has(name)) pendingCategoryNames.delete(name);
   });
-  const categoryNames = [...new Set([
-    ...defaultEventCategories,
-    ...categories.map((item) => item.name),
-    ...schedules.map((event) => String(event.category || '').trim()).filter(Boolean),
-    ...pendingCategoryNames,
-  ])];
+  const categoryNames = activeEventCategoryNames();
   [eventCategoryInput, eventEditCategory].forEach((select) => {
     const selectedName = select.value;
     select.replaceChildren(...categoryNames.map((category) => {
@@ -929,7 +955,7 @@ function refreshEventCategoryOptions() {
       option.textContent = category;
       return option;
     }));
-    if (categoryNames.includes(selectedName)) select.value = selectedName;
+    select.value = categoryNames.includes(selectedName) ? selectedName : fallbackEventCategory();
   });
 }
 
@@ -945,12 +971,14 @@ async function saveEventCategory(name, color) {
   };
   if (snapshot.exists()) {
     const savedCategory = snapshot.data();
+    if (savedCategory.deleted === true) throw new Error('這個類別已停用，請改選其他類別。');
     if (/^#[0-9a-f]{6}$/i.test(savedCategory.color || '')) return savedCategory.color;
     await updateDoc(categoryRef, categoryData);
   } else {
     await setDoc(categoryRef, { ...categoryData, createdAt: serverTimestamp() });
   }
   pendingCategoryNames.delete(name);
+  return color;
 }
 
 function syncCategoryColor(categoryInput, colorInput) {
@@ -968,19 +996,23 @@ function syncCategoryColor(categoryInput, colorInput) {
 }
 
 function addEventCategory(select, colorInput) {
-  const name = window.prompt('輸入新類別名稱（最多 40 字）：')?.trim().slice(0, 40);
-  if (!name) return;
-  const existing = [...select.options].some((option) => option.value === name);
-  if (!existing) pendingCategoryNames.add(name);
-  refreshEventCategoryOptions();
-  select.value = name;
-  syncCategoryColor(select, colorInput);
+  openCategoryManager('create', { select, colorInput });
 }
 
 function managedEventCategories() {
-  return categories
-    .filter((item) => item.name && !defaultEventCategories.includes(item.name))
+  const deletedNames = deletedEventCategoryNames();
+  const defaults = defaultEventCategories
+    .filter((name) => !deletedNames.has(name))
+    .map((name) => ({
+      ...categories.find((item) => item.name === name && !item.deleted),
+      name,
+      color: eventCategoryColor(name),
+      isDefault: true,
+    }));
+  const custom = categories
+    .filter((item) => item.name && !item.deleted && !defaultEventCategories.includes(item.name))
     .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+  return [...defaults, ...custom];
 }
 
 function refreshCategoryManagerOptions(selectedName = managedCategorySelect.value) {
@@ -996,12 +1028,12 @@ function refreshCategoryManagerOptions(selectedName = managedCategorySelect.valu
 
   const hasCategories = items.length > 0;
   managedCategorySelect.disabled = !hasCategories;
-  managedCategoryFields.hidden = !hasCategories;
+  categoryManagerFields.hidden = !hasCategories;
   managedCategoryEmpty.hidden = hasCategories;
   managedCategoryName.disabled = !hasCategories;
   managedCategoryColor.disabled = !hasCategories;
   deleteManagedCategoryButton.disabled = !hasCategories;
-  document.querySelector('#save-managed-category').disabled = !hasCategories;
+  saveManagedCategoryButton.disabled = !hasCategories;
   if (hasCategories) loadManagedCategoryFields();
 }
 
@@ -1009,16 +1041,49 @@ function loadManagedCategoryFields() {
   const category = managedEventCategories().find((item) => item.name === managedCategorySelect.value);
   if (!category) return;
   managedCategoryName.value = category.name;
+  managedCategoryName.disabled = category.isDefault;
+  managedCategoryName.title = category.isDefault ? '預設類別不能重新命名' : '';
   managedCategoryColor.value = /^#[0-9a-f]{6}$/i.test(category.color || '')
     ? category.color
     : eventCategoryColor(category.name);
   categoryManagerFeedback.textContent = '';
 }
 
-function openCategoryManager() {
+function openCategoryManager(mode = 'manage', target = null) {
+  categoryManagerMode = mode;
+  categoryManagerTarget = target;
+  categoryPendingDeletionName = null;
+  categoryDeleteConfirm.hidden = true;
   categoryManagerFeedback.textContent = '';
-  refreshCategoryManagerOptions();
+  const isCreating = mode === 'create';
+  categoryManagerTitle.textContent = isCreating ? '新增行程類別' : '管理行程類別';
+  managedCategorySelectField.hidden = isCreating;
+  deleteManagedCategoryButton.hidden = isCreating;
+  saveManagedCategoryButton.textContent = isCreating ? '新增類別' : '儲存變更';
+  managedCategoryEmpty.hidden = isCreating || managedEventCategories().length > 0;
+  if (isCreating) {
+    managedCategorySelect.disabled = true;
+    categoryManagerFields.hidden = false;
+    managedCategoryName.disabled = false;
+    managedCategoryColor.disabled = false;
+    managedCategoryName.value = '';
+    managedCategoryColor.value = '#C4979C';
+    saveManagedCategoryButton.disabled = false;
+  } else {
+    refreshCategoryManagerOptions();
+  }
   categoryManagerDialog.showModal();
+}
+
+async function createManagedCategory(name, color) {
+  const normalizedName = name.trim().slice(0, 40);
+  if (!normalizedName) throw new Error('請輸入類別名稱。');
+  if (defaultEventCategories.includes(normalizedName) || categories.some((item) => item.name === normalizedName)) {
+    throw new Error('這個類別名稱已存在，請換一個名稱。');
+  }
+  if (!/^#[0-9a-f]{6}$/i.test(color || '')) throw new Error('請選擇有效的類別顏色。');
+  const savedColor = await saveEventCategory(normalizedName, color);
+  return { name: normalizedName, color: savedColor };
 }
 
 function applyManagedCategoryChange(previousName, nextName, previousSelections = [eventCategoryInput.value, eventEditCategory.value]) {
@@ -1047,20 +1112,31 @@ async function updateEventCategoryReferences(referencedEvents, categoryName) {
 }
 
 async function saveManagedCategory(oldName, newName, color) {
-  const existingCategory = categories.find((item) => item.name === oldName);
-  if (!existingCategory) throw new Error('找不到這個自訂類別，請重新整理後再試。');
+  const existingCategory = managedEventCategories().find((item) => item.name === oldName);
+  if (!existingCategory) throw new Error('找不到這個類別，請重新整理後再試。');
   const normalizedName = newName.trim().slice(0, 40);
   if (!normalizedName) throw new Error('請輸入類別名稱。');
+  if (existingCategory.isDefault && normalizedName !== oldName) throw new Error('預設類別不能重新命名，但可以更改顏色或刪除。');
   if (normalizedName !== oldName && (
     defaultEventCategories.includes(normalizedName)
-    || categories.some((item) => item.name === normalizedName)
+    || categories.some((item) => item.name === normalizedName && !item.deleted)
   )) throw new Error('這個類別名稱已存在，請換一個名稱。');
   if (!/^#[0-9a-f]{6}$/i.test(color || '')) throw new Error('請選擇有效的類別顏色。');
 
   const oldRef = doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(oldName));
   const newRef = doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(normalizedName));
   if (normalizedName === oldName) {
-    await updateDoc(oldRef, { name: normalizedName, color, updatedAt: serverTimestamp() });
+    if (existingCategory.isDefault) {
+      await setDoc(oldRef, {
+        name: normalizedName,
+        color,
+        deleted: false,
+        createdAt: existingCategory.createdAt || serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } else {
+      await updateDoc(oldRef, { name: normalizedName, color, updatedAt: serverTimestamp() });
+    }
     return normalizedName;
   }
 
@@ -1080,15 +1156,34 @@ async function saveManagedCategory(oldName, newName, color) {
 
 async function deleteManagedCategory(name) {
   const category = managedEventCategories().find((item) => item.name === name);
-  if (!category) throw new Error('找不到這個自訂類別，請重新整理後再試。');
+  if (!category) throw new Error('找不到這個類別，請重新整理後再試。');
+  const fallbackName = fallbackEventCategory(name);
+  if (!fallbackName) throw new Error('至少要保留一個行程類別；請先新增其他類別再刪除這個類別。');
   const referencedEvents = schedules.filter((item) => item.category === name);
   if (referencedEvents.length) {
-    await saveEventCategory('其他', eventCategoryColor('其他'));
-    await updateEventCategoryReferences(referencedEvents, '其他');
+    await saveEventCategory(fallbackName, eventCategoryColor(fallbackName));
+    await updateEventCategoryReferences(referencedEvents, fallbackName);
   }
-  await deleteDoc(doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(name)));
-  categories = categories.filter((item) => item.name !== name);
+  const categoryRef = doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(name));
+  if (category.isDefault) {
+    await setDoc(categoryRef, {
+      name,
+      color: category.color || defaultCategoryColors[name] || eventCategoryColor(name),
+      deleted: true,
+      createdAt: category.createdAt || serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    categories = [...categories.filter((item) => item.name !== name), {
+      ...category,
+      name,
+      deleted: true,
+    }];
+  } else {
+    await deleteDoc(categoryRef);
+    categories = categories.filter((item) => item.name !== name);
+  }
   pendingCategoryNames.delete(name);
+  return fallbackName;
 }
 
 function renderCalendar() {
@@ -1254,20 +1349,32 @@ eventCategoryInput.addEventListener('change', () => syncCategoryColor(eventCateg
 eventEditCategory.addEventListener('change', () => syncCategoryColor(eventEditCategory, eventEditCategoryColor));
 addEventCategoryButton.addEventListener('click', () => addEventCategory(eventCategoryInput, eventCategoryColorInput));
 addEditEventCategoryButton.addEventListener('click', () => addEventCategory(eventEditCategory, eventEditCategoryColor));
-manageEventCategoriesButton.addEventListener('click', openCategoryManager);
-manageEditEventCategoriesButton.addEventListener('click', openCategoryManager);
+manageEventCategoriesButton.addEventListener('click', () => openCategoryManager('manage'));
+manageEditEventCategoriesButton.addEventListener('click', () => openCategoryManager('manage'));
 managedCategorySelect.addEventListener('change', loadManagedCategoryFields);
 categoryManagerForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!currentUser) return;
+  const isCreating = categoryManagerMode === 'create';
   const previousName = managedCategorySelect.value;
   const previousSelections = [eventCategoryInput.value, eventEditCategory.value];
   const nextName = managedCategoryName.value.trim().slice(0, 40);
   const color = managedCategoryColor.value;
-  const saveButton = document.querySelector('#save-managed-category');
-  saveButton.disabled = true;
+  saveManagedCategoryButton.disabled = true;
   categoryManagerFeedback.textContent = '正在儲存類別…';
   try {
+    if (isCreating) {
+      const created = await createManagedCategory(nextName, color);
+      categories = [...categories.filter((item) => item.name !== created.name), created];
+      pendingCategoryNames.delete(created.name);
+      refreshEventCategoryOptions();
+      if (categoryManagerTarget) {
+        categoryManagerTarget.select.value = created.name;
+        syncCategoryColor(categoryManagerTarget.select, categoryManagerTarget.colorInput);
+      }
+      categoryManagerDialog.close();
+      return;
+    }
     const savedName = await saveManagedCategory(previousName, nextName, color);
     categories = categories.filter((item) => item.name !== previousName);
     categories.push({ name: savedName, color });
@@ -1281,37 +1388,67 @@ categoryManagerForm.addEventListener('submit', async (event) => {
     console.error('行程類別儲存失敗：', error.code || error.message);
     categoryManagerFeedback.textContent = error.message || '儲存類別失敗，請確認連線後重試。';
   } finally {
-    saveButton.disabled = !managedEventCategories().length;
+    saveManagedCategoryButton.disabled = categoryManagerMode === 'manage' && !managedEventCategories().length;
   }
 });
-deleteManagedCategoryButton.addEventListener('click', async () => {
+deleteManagedCategoryButton.addEventListener('click', () => {
   const name = managedCategorySelect.value;
   if (!name) return;
-  const previousSelections = [eventCategoryInput.value, eventEditCategory.value];
   const affectedCount = schedules.filter((item) => item.category === name).length;
-  const affectedNotice = affectedCount
-    ? `使用此類別的 ${affectedCount} 筆行程會改為「其他」，行程本身會保留。`
-    : '目前沒有行程使用這個類別。';
-  if (!window.confirm(`確定刪除自訂類別「${name}」？${affectedNotice}`)) return;
-  deleteManagedCategoryButton.disabled = true;
+  categoryPendingDeletionName = name;
+  const fallbackName = fallbackEventCategory(name);
+  categoryDeleteWarning.textContent = !fallbackName
+    ? '至少要保留一個行程類別；請先新增其他類別再刪除這個類別。'
+    : affectedCount
+      ? `確定刪除「${name}」？使用此類別的 ${affectedCount} 筆行程會改為「${fallbackName}」，行程資料會保留。`
+      : `確定刪除「${name}」？目前沒有行程使用這個類別。`;
+  categoryDeleteConfirm.hidden = false;
+  deleteManagedCategoryButton.hidden = true;
+  managedCategorySelect.disabled = true;
+  managedCategoryName.disabled = true;
+  managedCategoryColor.disabled = true;
+  saveManagedCategoryButton.disabled = true;
+  confirmCategoryDeleteButton.disabled = !fallbackName;
+  confirmCategoryDeleteButton.focus();
+});
+cancelCategoryDeleteButton.addEventListener('click', () => {
+  categoryPendingDeletionName = null;
+  categoryDeleteConfirm.hidden = true;
+  deleteManagedCategoryButton.hidden = false;
+  confirmCategoryDeleteButton.disabled = false;
+  refreshCategoryManagerOptions(managedCategorySelect.value);
+});
+confirmCategoryDeleteButton.addEventListener('click', async () => {
+  const name = categoryPendingDeletionName;
+  if (!name) return;
+  const previousSelections = [eventCategoryInput.value, eventEditCategory.value];
+  confirmCategoryDeleteButton.disabled = true;
   categoryManagerFeedback.textContent = '正在刪除類別…';
   try {
-    await deleteManagedCategory(name);
+    const fallbackName = await deleteManagedCategory(name);
     refreshEventCategoryOptions();
-    applyManagedCategoryChange(name, '其他', previousSelections);
+    applyManagedCategoryChange(name, fallbackName, previousSelections);
+    categoryPendingDeletionName = null;
+    categoryDeleteConfirm.hidden = true;
+    deleteManagedCategoryButton.hidden = false;
     refreshCategoryManagerOptions();
-    if (!managedEventCategories().length) categoryManagerFeedback.textContent = '類別已刪除。';
+    categoryManagerFeedback.textContent = '類別已刪除。';
   } catch (error) {
     console.error('行程類別刪除失敗：', error.code || error.message);
     categoryManagerFeedback.textContent = error.message || '刪除類別失敗，請確認連線後重試。';
   } finally {
-    deleteManagedCategoryButton.disabled = !managedEventCategories().length;
+    confirmCategoryDeleteButton.disabled = false;
   }
 });
 document.querySelector('#close-category-manager').addEventListener('click', () => categoryManagerDialog.close());
 document.querySelector('#cancel-category-manager').addEventListener('click', () => categoryManagerDialog.close());
 categoryManagerDialog.addEventListener('click', (event) => {
   if (event.target === categoryManagerDialog) categoryManagerDialog.close();
+});
+categoryManagerDialog.addEventListener('close', () => {
+  categoryManagerMode = 'manage';
+  categoryManagerTarget = null;
+  categoryPendingDeletionName = null;
 });
 eventRepeatFrequency.addEventListener('change', updateRepeatFields);
 eventDateInput.addEventListener('change', updateRepeatFields);
@@ -1394,7 +1531,7 @@ function startUserData(user) {
   calendarMonth -= 1;
   eventDateInput.value = selectedDateKey;
   updateRepeatFields();
-  eventCategoryInput.value = '其他';
+  eventCategoryInput.value = fallbackEventCategory();
   syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
   eventAllDayInput.checked = false;
   updateEventTimeFields(eventAllDayInput, eventTimeFields, eventStartInput, eventEndInput);
@@ -1421,7 +1558,9 @@ function startUserData(user) {
     refreshEventCategoryOptions();
     syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
     syncCategoryColor(eventEditCategory, eventEditCategoryColor);
-    if (categoryManagerDialog.open) refreshCategoryManagerOptions(managedCategorySelect.value);
+    if (categoryManagerDialog.open && categoryManagerMode === 'manage') {
+      refreshCategoryManagerOptions(managedCategorySelect.value);
+    }
     renderSchedules();
   }, showDataError);
 
@@ -1683,7 +1822,7 @@ function openEventEditor(event) {
   editingEventId = event.id;
   eventEditName.value = event.name || '';
   eventEditDate.value = event.date || selectedDateKey;
-  eventEditCategory.value = event.category || '其他';
+  eventEditCategory.value = event.category || fallbackEventCategory();
   syncCategoryColor(eventEditCategory, eventEditCategoryColor);
   eventEditAllDay.checked = Boolean(event.allDay);
   eventEditStart.value = event.startTime || event.time || '';
@@ -1892,7 +2031,7 @@ generatePlanButton.addEventListener('click', async () => {
     allDay: Boolean(item.allDay),
     startTime: item.startTime || item.time || '',
     endTime: item.endTime || '',
-    category: item.category || '其他',
+    category: item.category || fallbackEventCategory(),
   }));
 
   aiPlanPending = true;
@@ -2170,7 +2309,7 @@ scheduleForm.addEventListener('submit', async (event) => {
       ? `已加入「${name}」並儲存至你的帳號。${defaultEndNotice}`
       : `已加入「${name}」，共建立 ${occurrenceDates.length} 次行程；之後可分別編輯或刪除。${defaultEndNotice}`;
     scheduleForm.reset();
-    eventCategoryInput.value = '其他';
+    eventCategoryInput.value = fallbackEventCategory();
     eventAllDayInput.checked = false;
     updateRepeatFields();
     syncCategoryColor(eventCategoryInput, eventCategoryColorInput);

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=planner-ui-20261125-7">
-  <script type="module" src="script.js?v=planner-ui-20261125-7"></script>
+  <link rel="stylesheet" href="style.css?v=planner-ui-20261125-10">
+  <script type="module" src="script.js?v=planner-ui-20261125-10"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -271,6 +271,10 @@
           <div class="field category-color-field"><label for="managed-category-color">類別顏色</label><input id="managed-category-color" type="color" value="#85858b"></div>
         </div>
         <p class="form-feedback" id="category-manager-feedback" aria-live="polite"></p>
+        <div class="category-delete-confirm" id="category-delete-confirm" hidden>
+          <p id="category-delete-warning"></p>
+          <div class="dialog-actions"><button class="small-button" id="cancel-category-delete" type="button">取消刪除</button><button class="row-action is-danger" id="confirm-category-delete" type="button">確認刪除</button></div>
+        </div>
         <div class="dialog-actions"><button class="row-action is-danger" id="delete-managed-category" type="button">刪除類別</button><button class="small-button" id="cancel-category-manager" type="button">取消</button><button class="small-button is-primary" id="save-managed-category" type="submit">儲存變更</button></div>
       </form>
     </dialog>
