@@ -143,20 +143,13 @@ const inboxEmpty = document.querySelector('#inbox-empty');
 const todayList = document.querySelector('#today-task-list');
 const todayCount = document.querySelector('#today-count');
 const todayEmpty = document.querySelector('#today-empty');
-const nextTaskCard = document.querySelector('#next-task-card');
-const nextTaskName = document.querySelector('#next-task-name');
-const nextTaskDetail = document.querySelector('#next-task-detail');
-const completeNextTask = document.querySelector('#complete-next-task');
-const editNextTask = document.querySelector('#edit-next-task');
-const returnNextTask = document.querySelector('#return-next-task');
-const laterTasksTitle = document.querySelector('#later-tasks-title');
 const completedList = document.querySelector('#completed-task-list');
 const completedCount = document.querySelector('#completed-count');
 const completedEmpty = document.querySelector('#completed-empty');
 const xpLevel = document.querySelector('#xp-level');
 const xpTotal = document.querySelector('#xp-total');
 const xpProgress = document.querySelector('#xp-progress');
-const xpNextLevel = document.querySelector('#xp-next-level');
+const xpProgressLabel = document.querySelector('#xp-progress-label');
 const xpCompletions = document.querySelector('#xp-completions');
 const xpHistoryList = document.querySelector('#xp-history-list');
 const xpHistoryEmpty = document.querySelector('#xp-history-empty');
@@ -178,7 +171,6 @@ const geminiChatSendButton = document.querySelector('#gemini-chat-send');
 const scheduleList = document.querySelector('#schedule-list');
 const scheduleCount = document.querySelector('#schedule-count');
 const scheduleEmpty = document.querySelector('#schedule-empty');
-const todayEventList = document.querySelector('#today-event-list');
 const todayScheduleCount = document.querySelector('#today-schedule-count');
 const todayEventEmpty = document.querySelector('#today-event-empty');
 const scheduleForm = document.querySelector('#schedule-form');
@@ -191,6 +183,13 @@ const eventAllDayInput = document.querySelector('#event-all-day');
 const eventStartInput = document.querySelector('#event-start-time');
 const eventEndInput = document.querySelector('#event-end-time');
 const eventTimeFields = document.querySelector('#event-time-fields');
+const eventRepeatFrequency = document.querySelector('#event-repeat-frequency');
+const eventRepeatCustomFields = document.querySelector('#event-repeat-custom-fields');
+const eventRepeatInterval = document.querySelector('#event-repeat-interval');
+const eventRepeatUnit = document.querySelector('#event-repeat-unit');
+const eventRepeatUntilField = document.querySelector('#event-repeat-until-field');
+const eventRepeatUntil = document.querySelector('#event-repeat-until');
+const eventRepeatHint = document.querySelector('#event-repeat-hint');
 const editDialog = document.querySelector('#task-edit-dialog');
 const editForm = document.querySelector('#task-edit-form');
 const editName = document.querySelector('#edit-task-name');
@@ -212,6 +211,13 @@ const eventEditEnd = document.querySelector('#edit-event-end');
 const eventEditTimeFields = document.querySelector('#edit-event-time-fields');
 const eventEditNote = document.querySelector('#edit-event-note');
 const eventEditFeedback = document.querySelector('#edit-event-feedback');
+const eventEditRepeatNotice = document.querySelector('#edit-event-repeat-notice');
+const timePickerDialog = document.querySelector('#time-picker-dialog');
+const timePickerHour = document.querySelector('#time-picker-hour');
+const timePickerMinute = document.querySelector('#time-picker-minute');
+const timePickerConfirm = document.querySelector('#time-picker-confirm');
+let timePickerTarget = null;
+let activeTimelineDrag = null;
 
 const statusLabels = { pending: '未開始', progress: '進行中', done: '已完成' };
 const difficultyLabels = { low: '低', medium: '中', high: '高' };
@@ -272,6 +278,43 @@ function makeDateKey(year, monthIndex, day) {
   return `${yearText}-${monthText}-${dayText}`;
 }
 
+function addDaysToDateKey(dateKey, days) {
+  const date = parseDateKey(dateKey);
+  date.setUTCDate(date.getUTCDate() + days);
+  return makeDateKey(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function addMonthsToDateKey(dateKey, months) {
+  const date = parseDateKey(dateKey);
+  const day = date.getUTCDate();
+  const monthIndex = date.getUTCMonth() + months;
+  const targetYear = date.getUTCFullYear() + Math.floor(monthIndex / 12);
+  const targetMonth = ((monthIndex % 12) + 12) % 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0, 12)).getUTCDate();
+  return makeDateKey(targetYear, targetMonth, Math.min(day, lastDay));
+}
+
+function recurrenceDates(startDate, endDate, frequency, interval, unit) {
+  if (frequency === 'none') return [startDate];
+  if (!endDate || endDate < startDate) throw new Error('重複行程請設定不早於開始日期的結束日期。');
+  if (!Number.isInteger(interval) || interval < 1 || interval > 366) throw new Error('重複間隔請輸入 1 到 366 的整數。');
+  const stepUnit = frequency === 'weekly' ? 'week' : unit;
+  const stepInterval = frequency === 'weekly' ? 1 : interval;
+  const dates = [startDate];
+  let currentDate = startDate;
+  let occurrenceIndex = 0;
+  while (currentDate < endDate) {
+    occurrenceIndex += 1;
+    if (stepUnit === 'day') currentDate = addDaysToDateKey(startDate, stepInterval * occurrenceIndex);
+    else if (stepUnit === 'week') currentDate = addDaysToDateKey(startDate, stepInterval * 7 * occurrenceIndex);
+    else currentDate = addMonthsToDateKey(startDate, stepInterval * occurrenceIndex);
+    if (currentDate > endDate) break;
+    dates.push(currentDate);
+    if (dates.length > 366) throw new Error('這個重複範圍會產生超過 366 個行程，請縮短日期或調大間隔。');
+  }
+  return dates;
+}
+
 function formatDateKey(dateKey, options) {
   return new Intl.DateTimeFormat('zh-TW', { timeZone: 'UTC', ...options }).format(parseDateKey(dateKey));
 }
@@ -284,6 +327,7 @@ function setSelectedDate(dateKey, syncDisplayedMonth = true) {
     calendarMonth = month - 1;
   }
   eventDateInput.value = selectedDateKey;
+  updateRepeatFields();
   renderSchedules();
 }
 
@@ -326,8 +370,8 @@ function renderXpStats() {
   xpLevel.textContent = String(level);
   xpTotal.textContent = `${totalXp} XP`;
   xpProgress.value = progress;
-  xpProgress.setAttribute('aria-valuetext', `距離等級 ${level + 1} 還差 ${100 - progress} XP`);
-  xpNextLevel.textContent = `距離等級 ${level + 1} 還差 ${100 - progress} XP；首次完成待辦可獲得 10 XP。`;
+  xpProgress.setAttribute('aria-valuetext', `目前 ${progress} XP，升級還差 ${100 - progress} XP`);
+  xpProgressLabel.textContent = `${progress} / 100 XP`;
   xpCompletions.textContent = `已記錄完成 ${completedCount} 項待辦`;
 }
 
@@ -489,7 +533,7 @@ function getCreatedTime(task) {
 function taskDetail(task) {
   const details = [];
   if (task.dueDate) details.push(`截止 ${task.dueDate}`);
-  if (Number.isFinite(task.estimatedMinutes)) details.push(`約 ${task.estimatedMinutes} 分鐘`);
+  if (Number.isFinite(task.estimatedMinutes) && task.estimatedMinutes > 0) details.push(`約 ${task.estimatedMinutes} 分鐘`);
   if (task.difficulty && difficultyLabels[task.difficulty]) details.push(`難度 ${difficultyLabels[task.difficulty]}`);
   if (task.note) details.push(task.note);
   return details.join('・') || '尚未設定其他資訊';
@@ -507,6 +551,7 @@ function createActionButton(label, action, className = 'row-action') {
 function renderTaskRow(task, location, position = 0, total = 0) {
   const row = document.createElement('li');
   row.className = 'task-item task-item-rich';
+  if (location === 'today') row.classList.add('today-timeline-task', 'today-timeline-entry');
   row.dataset.id = task.id;
 
   const toggle = document.createElement(task.status === 'done' ? 'span' : 'button');
@@ -529,6 +574,12 @@ function renderTaskRow(task, location, position = 0, total = 0) {
   const note = document.createElement('p');
   note.textContent = taskDetail(task);
   copy.append(title, note);
+  if (location === 'today' && !(Number.isFinite(task.estimatedMinutes) && task.estimatedMinutes > 0)) {
+    const estimateHint = document.createElement('span');
+    estimateHint.className = 'timeline-duration-note';
+    estimateHint.textContent = '未設定預估時間';
+    copy.append(estimateHint);
+  }
 
   const status = document.createElement('span');
   status.className = `status status-${task.status}`;
@@ -541,16 +592,23 @@ function renderTaskRow(task, location, position = 0, total = 0) {
     if (task.status === 'progress') actions.append(createActionButton('退回未開始', 'mark-pending'));
     actions.append(createActionButton('加入今日', 'add-to-today', 'row-action is-primary'));
   } else if (location === 'today') {
-    const up = createActionButton('上移', 'move-up');
-    const down = createActionButton('下移', 'move-down');
-    up.disabled = position === 0;
-    down.disabled = position === total - 1;
-    actions.append(up, down, createActionButton('移回清單', 'return-to-inbox'));
+    actions.append(createActionButton('移回清單', 'return-to-inbox'));
   } else {
     actions.append(createActionButton('恢復待辦', 'undo-completion'));
   }
   actions.append(createActionButton('刪除', 'delete-task', 'row-action is-danger'));
-  row.append(toggle, copy, status, actions);
+  if (location === 'today') {
+    const dragHandle = document.createElement('button');
+    dragHandle.type = 'button';
+    dragHandle.className = 'timeline-drag-handle';
+    dragHandle.dataset.timelineDragHandle = 'true';
+    dragHandle.setAttribute('aria-label', `拖曳調整「${task.name}」在今日時間線的位置`);
+    dragHandle.title = '拖曳調整順序';
+    dragHandle.textContent = '⠿';
+    row.append(dragHandle, toggle, copy, status, actions);
+  } else {
+    row.append(toggle, copy, status, actions);
+  }
   return row;
 }
 
@@ -565,24 +623,8 @@ function renderTasks() {
   inboxNavCount.textContent = String(inboxTasks.length);
   inboxEmpty.hidden = inboxTasks.length > 0 || !currentUser;
 
-  todayList.replaceChildren();
-  todayTasks.slice(1).forEach((task, index) => {
-    todayList.append(renderTaskRow(task, 'today', index + 1, todayTasks.length));
-  });
-  updateCount(todayCount, todayTasks.length, '項任務');
+  renderTodayTimeline();
   todayEmpty.hidden = todayTasks.length > 0 || !currentUser;
-  laterTasksTitle.hidden = todayTasks.length <= 1;
-  if (todayTasks.length > 0) {
-    const firstTask = todayTasks[0];
-    nextTaskName.textContent = firstTask.name;
-    nextTaskDetail.textContent = taskDetail(firstTask);
-    completeNextTask.dataset.id = firstTask.id;
-    editNextTask.dataset.id = firstTask.id;
-    returnNextTask.dataset.id = firstTask.id;
-    nextTaskCard.hidden = false;
-  } else {
-    nextTaskCard.hidden = true;
-  }
 
   completedList.replaceChildren();
   completedTasks.forEach((task) => completedList.append(renderTaskRow(task, 'completed')));
@@ -599,15 +641,22 @@ function eventTimeLabel(event) {
   return '時間未設定';
 }
 
-function normalizeTimeInput(input) {
+function normalizeTimeInput(input, finishTyping = false) {
   const raw = input.value.trim();
-  if (/^\d{3,4}$/.test(raw)) {
+  if (/^\d{4}$/.test(raw)) {
     const digits = raw.padStart(4, '0');
     input.value = `${digits.slice(0, 2)}:${digits.slice(2)}`;
     return;
   }
+  const hourOnly = raw.match(/^(\d{1,2})$/);
+  if (hourOnly && finishTyping) {
+    input.value = `${hourOnly[1].padStart(2, '0')}:00`;
+    return;
+  }
   const match = raw.match(/^(\d{1,2}):(\d{0,2})$/);
-  if (match) input.value = `${match[1].padStart(2, '0')}:${match[2]}`;
+  if (match && (match[2].length === 2 || finishTyping)) {
+    input.value = `${match[1].padStart(2, '0')}:${(match[2] || '00').padStart(2, '0')}`;
+  }
 }
 
 function eventsForDate(dateKey) {
@@ -633,43 +682,129 @@ function todayTimelineEvents() {
     });
 }
 
-function renderTodayTimelineEvents() {
+function timelineGapMinutes(previousEvent, nextEvent) {
+  if (!previousEvent || !nextEvent || previousEvent.allDay || nextEvent.allDay) return null;
+  const previousEnd = previousEvent.endTime;
+  const nextStart = nextEvent.startTime || nextEvent.time;
+  const validTime = (time) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time || '');
+  if (!validTime(previousEnd) || !validTime(nextStart)) return null;
+  const toMinutes = (time) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+  return Math.max(0, toMinutes(nextStart) - toMinutes(previousEnd));
+}
+
+function createTodayEventRow(item) {
+  const row = document.createElement('li');
+  row.className = 'today-event-item today-timeline-entry';
+  row.dataset.timelineKind = 'event';
+  row.dataset.id = item.id;
+  const track = document.createElement('div');
+  track.className = 'today-event-track';
+  const time = document.createElement('time');
+  time.textContent = eventTimeLabel(item);
+  const dot = document.createElement('span');
+  dot.className = 'today-event-dot';
+  const color = eventCategoryColor(item.category);
+  row.style.setProperty('--category-color', color);
+  track.append(time, dot);
+
+  const copy = document.createElement('div');
+  copy.className = 'today-event-copy';
+  const title = document.createElement('h5');
+  title.textContent = item.name;
+  copy.append(title);
+  if (item.note) {
+    const note = document.createElement('p');
+    note.textContent = item.note;
+    copy.append(note);
+  }
+
+  const tag = document.createElement('span');
+  tag.className = `event-tag tag-${item.style || 'other'}`;
+  tag.style.backgroundColor = color;
+  tag.style.color = categoryTextColor(color);
+  tag.textContent = item.category || '行程';
+  row.append(track, copy, tag);
+  return row;
+}
+
+function createTimelineGapRow(minutes, plannedMinutes, unestimatedCount) {
+  const row = document.createElement('li');
+  row.className = `timeline-gap-label${plannedMinutes > minutes ? ' is-overflowing' : ''}`;
+  row.setAttribute('aria-label', `這兩個行程之間有 ${minutes} 分鐘空檔`);
+  const summary = plannedMinutes > minutes
+    ? `行程間空檔 ${minutes} 分鐘・已估時 ${plannedMinutes} 分鐘，超出 ${plannedMinutes - minutes} 分鐘`
+    : `行程間空檔 ${minutes} 分鐘・已估時 ${plannedMinutes} 分鐘`;
+  row.textContent = unestimatedCount
+    ? `${summary}・另有 ${unestimatedCount} 項未估時`
+    : summary;
+  return row;
+}
+
+function renderTodayTimeline() {
+  if (!todayList) return;
   const todayEvents = todayTimelineEvents();
-  todayEventList.replaceChildren();
-  todayEvents.forEach((item) => {
-    const row = document.createElement('li');
-    row.className = 'today-event-item';
-    const track = document.createElement('div');
-    track.className = 'today-event-track';
-    const time = document.createElement('time');
-    time.textContent = eventTimeLabel(item);
-    const dot = document.createElement('span');
-    dot.className = 'today-event-dot';
-    const color = eventCategoryColor(item.category);
-    row.style.setProperty('--category-color', color);
-    track.append(time, dot);
-
-    const copy = document.createElement('div');
-    copy.className = 'today-event-copy';
-    const title = document.createElement('h5');
-    title.textContent = item.name;
-    copy.append(title);
-    if (item.note) {
-      const note = document.createElement('p');
-      note.textContent = item.note;
-      copy.append(note);
-    }
-
-    const tag = document.createElement('span');
-    tag.className = `event-tag tag-${item.style || 'other'}`;
-    tag.style.backgroundColor = color;
-    tag.style.color = categoryTextColor(color);
-    tag.textContent = item.category || '行程';
-    row.append(track, copy, tag);
-    todayEventList.append(row);
+  const todayTasks = getTodayTasks();
+  const eventIds = new Set(todayEvents.map((item) => item.id));
+  const taskBuckets = new Map();
+  const getBucket = (eventId) => {
+    const key = eventId || '';
+    if (!taskBuckets.has(key)) taskBuckets.set(key, []);
+    return taskBuckets.get(key);
+  };
+  todayTasks.forEach((task) => {
+    const anchorId = eventIds.has(task.timelineAfterEventId) ? task.timelineAfterEventId : null;
+    getBucket(anchorId).push(task);
   });
+  todayList.replaceChildren();
+  updateCount(todayCount, todayTasks.length, '項待辦');
   updateCount(todayScheduleCount, todayEvents.length, '個行程');
+  todayEmpty.hidden = todayTasks.length > 0 || !currentUser;
   todayEventEmpty.hidden = todayEvents.length > 0 || !currentUser;
+
+  const appendTasksForGap = (previousEvent, nextEvent) => {
+    const bucket = getBucket(previousEvent?.id || null);
+    const availableGap = timelineGapMinutes(previousEvent, nextEvent);
+    let elapsedMinutes = 0;
+    let unestimatedCount = 0;
+    bucket.forEach((task, index) => {
+      const taskRow = renderTaskRow(task, 'today', index, bucket.length);
+      taskRow.dataset.timelineKind = 'task';
+      const hasDuration = Number.isFinite(task.estimatedMinutes) && task.estimatedMinutes > 0;
+      const duration = hasDuration ? task.estimatedMinutes : 0;
+      if (!hasDuration) unestimatedCount += 1;
+      if (availableGap !== null && duration > 0 && elapsedMinutes + duration > availableGap) {
+        taskRow.classList.add('is-overflowing');
+        const warning = document.createElement('span');
+        warning.className = 'timeline-overflow-warning';
+        warning.setAttribute('role', 'img');
+        warning.setAttribute('aria-label', `超出行程間的 ${availableGap} 分鐘空檔`);
+        warning.title = `預估時長超出行程間的 ${availableGap} 分鐘空檔`;
+        warning.textContent = '⚠ 超出空檔';
+        taskRow.querySelector('.task-copy')?.append(warning);
+      }
+      elapsedMinutes += duration;
+      todayList.append(taskRow);
+    });
+    return { minutes: elapsedMinutes, unestimatedCount };
+  };
+
+  let previousGapOverflow = false;
+  todayEvents.forEach((item, index) => {
+    const previousEvent = todayEvents[index - 1] || null;
+    const nextEvent = todayEvents[index + 1] || null;
+    if (index === 0) appendTasksForGap(null, item);
+    const eventRow = createTodayEventRow(item);
+    if (previousGapOverflow) eventRow.classList.add('has-overflow-before');
+    todayList.append(eventRow);
+    const gapPlan = appendTasksForGap(item, nextEvent);
+    const availableGap = timelineGapMinutes(item, nextEvent);
+    if (availableGap !== null) todayList.append(createTimelineGapRow(availableGap, gapPlan.minutes, gapPlan.unestimatedCount));
+    previousGapOverflow = availableGap !== null && gapPlan.minutes > availableGap;
+  });
+  if (!todayEvents.length) appendTasksForGap(null, null);
 }
 
 function eventCategoryColor(category = '其他') {
@@ -842,7 +977,7 @@ function renderSchedules() {
   });
   updateCount(scheduleCount, selectedEvents.length, '個安排');
   scheduleEmpty.hidden = selectedEvents.length > 0 || !currentUser;
-  renderTodayTimelineEvents();
+  renderTodayTimeline();
   renderCalendar();
 }
 
@@ -900,10 +1035,43 @@ calendarTodayButton.addEventListener('click', () => setSelectedDate(taipeiDateKe
 eventAllDayInput.addEventListener('change', () => updateEventTimeFields(eventAllDayInput, eventTimeFields, eventStartInput, eventEndInput));
 eventCategoryInput.addEventListener('change', () => syncCategoryColor(eventCategoryInput, eventCategoryColorInput));
 eventEditCategory.addEventListener('change', () => syncCategoryColor(eventEditCategory, eventEditCategoryColor));
+eventRepeatFrequency.addEventListener('change', updateRepeatFields);
+eventDateInput.addEventListener('change', updateRepeatFields);
 for (const timeInput of [eventStartInput, eventEndInput, eventEditStart, eventEditEnd]) {
   timeInput.addEventListener('input', () => normalizeTimeInput(timeInput));
+  timeInput.addEventListener('blur', () => normalizeTimeInput(timeInput, true));
 }
 eventEditAllDay.addEventListener('change', () => updateEventTimeFields(eventEditAllDay, eventEditTimeFields, eventEditStart, eventEditEnd));
+
+function fillSelectOptions(select, count) {
+  select.replaceChildren(...Array.from({ length: count }, (_, value) => {
+    const option = document.createElement('option');
+    option.value = String(value).padStart(2, '0');
+    option.textContent = option.value;
+    return option;
+  }));
+}
+
+fillSelectOptions(timePickerHour, 24);
+fillSelectOptions(timePickerMinute, 60);
+document.querySelectorAll('.time-picker-trigger').forEach((button) => {
+  button.addEventListener('click', () => {
+    timePickerTarget = document.getElementById(button.dataset.timeTarget);
+    if (!timePickerTarget) return;
+    const match = timePickerTarget.value.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+    timePickerHour.value = match?.[1] || '09';
+    timePickerMinute.value = match?.[2] || '00';
+    timePickerDialog.showModal();
+  });
+});
+timePickerConfirm.addEventListener('click', () => {
+  if (!timePickerTarget) return;
+  timePickerTarget.value = `${timePickerHour.value}:${timePickerMinute.value}`;
+  timePickerTarget.dispatchEvent(new Event('input', { bubbles: true }));
+  timePickerDialog.close();
+  timePickerTarget.focus();
+  timePickerTarget = null;
+});
 
 function showDataError(error) {
   console.error('Firebase 資料讀取失敗：', error.code || error.message);
@@ -945,6 +1113,7 @@ function startUserData(user) {
   [calendarYear, calendarMonth] = selectedDateKey.split('-').map(Number);
   calendarMonth -= 1;
   eventDateInput.value = selectedDateKey;
+  updateRepeatFields();
   eventCategoryInput.value = '其他';
   syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
   eventAllDayInput.checked = false;
@@ -980,7 +1149,7 @@ function startUserData(user) {
     renderXpStats();
   }, (error) => {
     console.error('經驗值讀取失敗：', error.code || error.message);
-    xpNextLevel.textContent = '目前無法讀取經驗值，請確認連線與 Firestore 規則。';
+    xpProgressLabel.textContent = '目前無法讀取進度';
   });
 
   xpHistoryEmpty.textContent = '載入完成紀錄中…';
@@ -1126,6 +1295,8 @@ async function moveTaskToToday(task) {
   await updateDoc(taskRef, {
     plannedDate: taipeiDateKey(),
     todayOrder: getTodayTasks().length,
+    timelineAfterEventId: null,
+    timelineOrder: getTodayTasks().length,
     updatedAt: serverTimestamp(),
   });
 }
@@ -1135,24 +1306,10 @@ async function moveTaskToInbox(task) {
   await updateDoc(taskRef, {
     plannedDate: null,
     todayOrder: null,
+    timelineAfterEventId: null,
+    timelineOrder: null,
     updatedAt: serverTimestamp(),
   });
-}
-
-async function reorderToday(taskId, direction) {
-  const ordered = getTodayTasks();
-  const index = ordered.findIndex((task) => task.id === taskId);
-  const otherIndex = index + direction;
-  if (index < 0 || otherIndex < 0 || otherIndex >= ordered.length) return;
-  [ordered[index], ordered[otherIndex]] = [ordered[otherIndex], ordered[index]];
-  const batch = writeBatch(db);
-  ordered.forEach((task, position) => {
-    batch.update(doc(db, 'users', currentUser.uid, 'tasks', task.id), {
-      todayOrder: position,
-      updatedAt: serverTimestamp(),
-    });
-  });
-  await batch.commit();
 }
 
 function openTaskEditor(task) {
@@ -1181,6 +1338,16 @@ function updateEventTimeFields(checkbox, container, startInput, endInput) {
   endInput.required = false;
 }
 
+function updateRepeatFields() {
+  const repeats = eventRepeatFrequency.value !== 'none';
+  eventRepeatCustomFields.hidden = eventRepeatFrequency.value !== 'custom';
+  eventRepeatUntilField.hidden = !repeats;
+  eventRepeatHint.hidden = !repeats;
+  eventRepeatUntil.required = repeats;
+  eventRepeatUntil.min = eventDateInput.value || '';
+  if (!repeats) eventRepeatUntil.value = '';
+}
+
 function openEventEditor(event) {
   editingEventId = event.id;
   eventEditName.value = event.name || '';
@@ -1191,6 +1358,7 @@ function openEventEditor(event) {
   eventEditStart.value = event.startTime || event.time || '';
   eventEditEnd.value = event.endTime || '';
   eventEditNote.value = event.note || '';
+  eventEditRepeatNotice.hidden = !event.recurrenceGroupId;
   eventEditFeedback.textContent = '';
   updateEventTimeFields(eventEditAllDay, eventEditTimeFields, eventEditStart, eventEditEnd);
   eventEditDialog.showModal();
@@ -1233,12 +1401,6 @@ async function handleTaskAction(event) {
         break;
       case 'return-to-inbox':
         await moveTaskToInbox(task);
-        break;
-      case 'move-up':
-        await reorderToday(task.id, -1);
-        break;
-      case 'move-down':
-        await reorderToday(task.id, 1);
         break;
       case 'edit-task':
         openTaskEditor(task);
@@ -1474,6 +1636,8 @@ taskForm.addEventListener('submit', async (event) => {
       difficulty: null,
       plannedDate: null,
       todayOrder: null,
+      timelineAfterEventId: null,
+      timelineOrder: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -1490,31 +1654,82 @@ inboxList.addEventListener('click', handleTaskAction);
 todayList.addEventListener('click', handleTaskAction);
 completedList.addEventListener('click', handleTaskAction);
 
-completeNextTask.addEventListener('click', async () => {
-  const task = tasks.find((item) => item.id === completeNextTask.dataset.id);
-  if (!task || !currentUser) return;
+function restoreTimelineDrag() {
+  if (!activeTimelineDrag) return;
+  activeTimelineDrag.row.classList.remove('is-dragging');
+  todayList.replaceChildren(...activeTimelineDrag.originalRows);
+  activeTimelineDrag = null;
+}
+
+async function saveTimelineOrder() {
+  if (!currentUser) return;
+  const batch = writeBatch(db);
+  let previousEventId = null;
+  let taskPosition = 0;
+  const gapPositions = new Map();
+  todayList.querySelectorAll('.today-timeline-entry').forEach((row) => {
+    if (row.dataset.timelineKind === 'event') {
+      previousEventId = row.dataset.id;
+      return;
+    }
+    const slotKey = previousEventId || '';
+    const timelineOrder = gapPositions.get(slotKey) || 0;
+    gapPositions.set(slotKey, timelineOrder + 1);
+    batch.update(doc(db, 'users', currentUser.uid, 'tasks', row.dataset.id), {
+      todayOrder: taskPosition,
+      timelineAfterEventId: previousEventId,
+      timelineOrder,
+      updatedAt: serverTimestamp(),
+    });
+    taskPosition += 1;
+  });
+  await batch.commit();
+}
+
+todayList.addEventListener('pointerdown', (event) => {
+  const handle = event.target.closest('[data-timeline-drag-handle]');
+  const row = handle?.closest('.today-timeline-task');
+  if (!handle || !row || !currentUser || event.button > 0) return;
+  event.preventDefault();
+  activeTimelineDrag = {
+    pointerId: event.pointerId,
+    handle,
+    row,
+    originalRows: [...todayList.children],
+    originalOrder: [...todayList.children].map((entry) => `${entry.dataset.timelineKind}:${entry.dataset.id}`),
+  };
+  row.classList.add('is-dragging');
+  handle.setPointerCapture(event.pointerId);
+});
+
+todayList.addEventListener('pointermove', (event) => {
+  if (!activeTimelineDrag || activeTimelineDrag.pointerId !== event.pointerId) return;
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.today-timeline-entry');
+  if (!target || target === activeTimelineDrag.row) return;
+  const rect = target.getBoundingClientRect();
+  const insertBefore = event.clientY < rect.top + rect.height / 2;
+  if (insertBefore) todayList.insertBefore(activeTimelineDrag.row, target);
+  else todayList.insertBefore(activeTimelineDrag.row, target.nextElementSibling);
+});
+
+todayList.addEventListener('pointerup', async (event) => {
+  if (!activeTimelineDrag || activeTimelineDrag.pointerId !== event.pointerId) return;
+  const drag = activeTimelineDrag;
+  drag.row.classList.remove('is-dragging');
+  activeTimelineDrag = null;
+  const currentOrder = [...todayList.children].map((entry) => `${entry.dataset.timelineKind}:${entry.dataset.id}`);
+  if (currentOrder.join('|') === drag.originalOrder.join('|')) return;
   try {
-    await saveTaskStatus(task, 'done');
+    await saveTimelineOrder();
   } catch (error) {
-    console.error('完成任務失敗：', error.code || error.message);
-    authMessage.textContent = '更新失敗，請確認連線與 Firestore 規則後重試。';
+    console.error('今日時間線排序儲存失敗：', error.code || error.message);
+    todayList.replaceChildren(...drag.originalRows);
+    authMessage.textContent = '時間線排序儲存失敗，請確認連線後重試。';
   }
 });
 
-returnNextTask.addEventListener('click', async () => {
-  const task = tasks.find((item) => item.id === returnNextTask.dataset.id);
-  if (!task || !currentUser) return;
-  try {
-    await moveTaskToInbox(task);
-  } catch (error) {
-    console.error('移回清單失敗：', error.code || error.message);
-    authMessage.textContent = '更新失敗，請確認連線與 Firestore 規則後重試。';
-  }
-});
-
-editNextTask.addEventListener('click', () => {
-  const task = tasks.find((item) => item.id === editNextTask.dataset.id);
-  if (task && currentUser) openTaskEditor(task);
+todayList.addEventListener('pointercancel', (event) => {
+  if (activeTimelineDrag?.pointerId === event.pointerId) restoreTimelineDrag();
 });
 
 editForm.addEventListener('submit', async (event) => {
@@ -1557,6 +1772,8 @@ editDialog.addEventListener('click', (event) => {
 scheduleForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!currentUser) return;
+  normalizeTimeInput(eventStartInput, true);
+  normalizeTimeInput(eventEndInput, true);
   const name = document.querySelector('#event-name').value.trim();
   const date = eventDateInput.value;
   const category = eventCategoryInput.value.trim();
@@ -1564,17 +1781,44 @@ scheduleForm.addEventListener('submit', async (event) => {
   const startTime = allDay ? '' : eventStartInput.value;
   const endTime = allDay ? '' : eventEndInput.value;
   const note = document.querySelector('#event-note').value.trim();
+  const repeatFrequency = eventRepeatFrequency.value;
+  const repeatInterval = repeatFrequency === 'weekly' ? 1 : Number(eventRepeatInterval.value);
+  const repeatUnit = repeatFrequency === 'weekly' ? 'week' : eventRepeatUnit.value;
   if (!name || !date || !category) { scheduleFeedback.textContent = '請填寫行程名稱、日期與類別。'; return; }
   if (!validTimeRange(allDay, startTime, endTime)) { scheduleFeedback.textContent = '開始時間請用 24 小時制；結束時間可留空，如有填寫須晚於開始時間。'; return; }
+  let occurrenceDates;
+  try {
+    occurrenceDates = recurrenceDates(date, eventRepeatUntil.value, repeatFrequency, repeatInterval, repeatUnit);
+  } catch (error) {
+    scheduleFeedback.textContent = error.message;
+    return;
+  }
   try {
     await saveEventCategory(category, eventCategoryColorInput.value);
-    await addDoc(userCollection('events'), {
-      name, date, allDay, startTime, endTime, time: startTime, note, category,
-      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    const eventCollection = userCollection('events');
+    const batch = writeBatch(db);
+    const recurrenceGroupId = repeatFrequency === 'none'
+      ? null
+      : (window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    occurrenceDates.forEach((occurrenceDate) => {
+      const eventRef = doc(eventCollection);
+      batch.set(eventRef, {
+        name, date: occurrenceDate, allDay, startTime, endTime, time: startTime, note, category,
+        recurrenceGroupId,
+        recurrenceFrequency: repeatFrequency === 'none' ? null : repeatFrequency,
+        recurrenceInterval: repeatFrequency === 'none' ? null : repeatInterval,
+        recurrenceUnit: repeatFrequency === 'none' ? null : repeatUnit,
+        recurrenceEndDate: repeatFrequency === 'none' ? null : eventRepeatUntil.value,
+        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+      });
     });
-    scheduleFeedback.textContent = `已加入「${name}」並儲存至你的帳號。`;
+    await batch.commit();
+    scheduleFeedback.textContent = repeatFrequency === 'none'
+      ? `已加入「${name}」並儲存至你的帳號。`
+      : `已加入「${name}」，共建立 ${occurrenceDates.length} 次行程；之後可分別編輯或刪除。`;
     scheduleForm.reset();
     eventAllDayInput.checked = false;
+    updateRepeatFields();
     syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
     updateEventTimeFields(eventAllDayInput, eventTimeFields, eventStartInput, eventEndInput);
     setSelectedDate(date, true);
@@ -1591,7 +1835,11 @@ scheduleList.addEventListener('click', async (event) => {
   const item = schedules.find((entry) => entry.id === row.dataset.id);
   if (!item) return;
   if (button.dataset.action === 'edit-event') { openEventEditor(item); return; }
-  if (button.dataset.action !== 'delete-schedule' || !window.confirm(`確定刪除行程「${item.name}」？`)) return;
+  if (button.dataset.action !== 'delete-schedule') return;
+  const deletePrompt = item.recurrenceGroupId
+    ? `確定只刪除「${item.name}」這一天的重複行程？其他日期會保留。`
+    : `確定刪除行程「${item.name}」？`;
+  if (!window.confirm(deletePrompt)) return;
   try {
     await deleteDoc(doc(db, 'users', currentUser.uid, 'events', item.id));
   } catch (error) {
@@ -1603,6 +1851,8 @@ scheduleList.addEventListener('click', async (event) => {
 eventEditForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!currentUser || !editingEventId) return;
+  normalizeTimeInput(eventEditStart, true);
+  normalizeTimeInput(eventEditEnd, true);
   const name = eventEditName.value.trim();
   const date = eventEditDate.value;
   const category = eventEditCategory.value.trim();

@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=today-timeline-20261125-1">
-  <script type="module" src="script.js?v=today-timeline-20261125-1"></script>
+  <link rel="stylesheet" href="style.css?v=timeline-xp-repeat-20261125-1">
+  <script type="module" src="script.js?v=timeline-xp-repeat-20261125-1"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -38,6 +38,20 @@
     </section>
 
     <div class="app-content" id="dashboard-grid" hidden>
+      <section class="xp-card" aria-labelledby="xp-title">
+        <div class="xp-card-heading">
+          <div><p class="section-kicker">YOUR PROGRESS</p><h3 id="xp-title">LV <span id="xp-level">1</span></h3></div>
+          <strong class="xp-total" id="xp-total">0 XP</strong>
+        </div>
+        <progress class="xp-progress" id="xp-progress" max="100" value="0" aria-label="升級進度"></progress>
+        <p class="xp-progress-label" id="xp-progress-label">0 / 100 XP</p>
+        <p class="xp-completions" id="xp-completions">已記錄完成 0 項待辦</p>
+        <details class="xp-history">
+          <summary>查看最近完成紀錄</summary>
+          <ul id="xp-history-list" aria-live="polite"></ul>
+          <p id="xp-history-empty">還沒有完成紀錄。</p>
+        </details>
+      </section>
       <nav class="main-nav" aria-label="主要頁面">
         <button class="nav-button" type="button" data-view="inbox" aria-pressed="false">清單 <span id="inbox-nav-count">0</span></button>
         <button class="nav-button is-active" type="button" data-view="today" aria-pressed="true">今日</button>
@@ -48,56 +62,18 @@
         <div class="section-heading page-heading">
           <div><p class="section-kicker">YOUR DAY</p><h2 id="today-view-title">今日要推進的事</h2></div>
         </div>
-        <section class="xp-card" aria-labelledby="xp-title">
-          <div class="xp-card-heading">
-            <div><p class="section-kicker">YOUR PROGRESS</p><h3 id="xp-title">等級 <span id="xp-level">1</span></h3></div>
-            <strong class="xp-total" id="xp-total">0 XP</strong>
-          </div>
-          <progress class="xp-progress" id="xp-progress" max="100" value="0" aria-label="升級進度"></progress>
-          <p class="xp-next-level" id="xp-next-level">累積 100 XP 升級；首次完成待辦可獲得 10 XP。</p>
-          <p class="xp-completions" id="xp-completions">已記錄完成 0 項待辦</p>
-          <details class="xp-history">
-            <summary>查看最近完成紀錄</summary>
-            <ul id="xp-history-list" aria-live="polite"></ul>
-            <p id="xp-history-empty">還沒有完成紀錄。</p>
-          </details>
-        </section>
         <section class="panel today-timeline-panel" aria-labelledby="today-timeline-title">
           <div class="section-heading today-timeline-heading">
             <div>
               <p class="section-kicker">TODAY TIMELINE</p>
               <h3 id="today-timeline-title">今日時間線</h3>
-              <p class="today-timeline-description">待辦依排序獨立顯示、不設定開始時間；行程沿用行事曆時間，不建立重複資料。</p>
+              <p class="today-timeline-description">拖曳待辦可安排在行程之間；沿用行事曆時間，空檔不足時會提示。</p>
             </div>
+            <div class="today-timeline-counts"><span class="count-pill" id="today-count">0 項待辦</span><span class="count-pill" id="today-schedule-count">0 個行程</span></div>
           </div>
-          <section class="today-timeline-group" aria-labelledby="today-tasks-title">
-            <div class="section-heading today-timeline-group-heading">
-              <h4 id="today-tasks-title">今日待辦</h4>
-              <span class="count-pill" id="today-count">0 項任務</span>
-            </div>
-            <section class="spotlight-card" id="next-task-card" aria-live="polite" hidden>
-              <p class="spotlight-label">現在先做這一件</p>
-              <h3 id="next-task-name"></h3>
-              <p id="next-task-detail"></p>
-              <div class="spotlight-actions">
-                <button class="small-button is-primary" id="complete-next-task" type="button">標記完成</button>
-                <button class="small-button" id="edit-next-task" type="button">編輯資訊</button>
-                <button class="small-button" id="return-next-task" type="button">移回清單</button>
-              </div>
-            </section>
-            <p class="empty-message" id="today-empty" hidden>今天還沒有待辦。可以從清單挑選任務加入今天。</p>
-            <h5 class="subsection-title" id="later-tasks-title" hidden>其他待辦</h5>
-            <ul class="task-list task-list-large" id="today-task-list" aria-live="polite"></ul>
-          </section>
-          <section class="today-timeline-group" aria-labelledby="today-events-title">
-            <div class="section-heading today-timeline-group-heading">
-              <h4 id="today-events-title">行事曆行程</h4>
-              <span class="count-pill" id="today-schedule-count">0 個行程</span>
-            </div>
-            <p class="today-events-hint">全天與未設定時間的行程會另外標示；有開始時間的行程依時間排列。</p>
-            <ol class="today-event-list" id="today-event-list" aria-live="polite"></ol>
-            <p class="empty-message" id="today-event-empty" hidden>今天沒有行事曆行程。</p>
-          </section>
+          <p class="empty-message" id="today-empty" hidden>今天還沒有待辦，可以從清單加入。</p>
+          <p class="empty-message today-event-empty" id="today-event-empty" hidden>今天沒有行事曆行程。</p>
+          <ol class="today-timeline-list" id="today-task-list" aria-live="polite"></ol>
         </section>
         <section class="panel ai-plan-panel" aria-labelledby="ai-plan-title">
           <div class="section-heading form-heading">
@@ -173,6 +149,15 @@
               <div class="field"><label for="event-name">行程名稱</label><input id="event-name" name="event-name" type="text" maxlength="120" placeholder="例如：和朋友喝咖啡" required></div>
               <div class="field"><label for="event-date">日期</label><input id="event-date" name="event-date" type="date" required></div>
             </div>
+            <div class="repeat-settings">
+              <div class="field"><label for="event-repeat-frequency">重複</label><select id="event-repeat-frequency" name="event-repeat-frequency"><option value="none">不重複</option><option value="weekly">每週</option><option value="custom">自訂頻率</option></select></div>
+              <div class="form-row repeat-custom-fields" id="event-repeat-custom-fields" hidden>
+                <div class="field"><label for="event-repeat-interval">每隔</label><input id="event-repeat-interval" type="number" min="1" max="366" value="1"></div>
+                <div class="field"><label for="event-repeat-unit">頻率單位</label><select id="event-repeat-unit"><option value="day">天</option><option value="week">週</option><option value="month">月</option></select></div>
+              </div>
+              <div class="field repeat-until-field" id="event-repeat-until-field" hidden><label for="event-repeat-until">重複至</label><input id="event-repeat-until" type="date"></div>
+              <p class="field-hint repeat-hint" id="event-repeat-hint" hidden>每次重複會建立獨立行程，可分別編輯或刪除。</p>
+            </div>
             <div class="form-row category-row">
               <div class="field"><label for="event-category">行程類別</label><input id="event-category" name="event-category" type="text" list="event-category-options" maxlength="40" value="其他" required><datalist id="event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
               <div class="field category-color-field"><label for="event-category-color">類別顏色</label><input id="event-category-color" name="event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
@@ -180,9 +165,9 @@
             <p class="field-hint">建立新類別時選擇顏色；之後使用同一類別會沿用此色。</p>
             <label class="all-day-option" for="event-all-day"><input id="event-all-day" name="event-all-day" type="checkbox"> 全天行程</label>
             <div class="form-row event-time-fields" id="event-time-fields">
-              <div class="field"><label for="event-start-time">開始時間</label><input id="event-start-time" name="event-start-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30" required></div>
-              <div class="field"><label for="event-end-time">結束時間 <span class="optional">選填</span></label><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
-              <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
+              <div class="field"><label for="event-start-time">開始時間</label><div class="time-input-group"><input id="event-start-time" name="event-start-time" type="text" inputmode="numeric" maxlength="5" placeholder="09:30" required><button class="time-picker-trigger" type="button" data-time-target="event-start-time">選時間</button></div></div>
+              <div class="field"><label for="event-end-time">結束時間 <span class="optional">選填</span></label><div class="time-input-group"><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="event-end-time">選時間</button></div></div>
+              <p class="field-hint time-format-hint">可輸入 0930 或 13（會成為 13:00），也可用滾動選單挑選。</p>
             </div>
             <div class="field"><label for="event-note">備註 <span class="optional">選填</span></label><input id="event-note" name="event-note" type="text" maxlength="240" placeholder="地點或想記下的小提醒"></div>
             <button class="submit-button" type="submit"><span aria-hidden="true">＋</span> 加入行程</button>
@@ -249,6 +234,7 @@
         </div>
         <div class="field"><label for="edit-event-name">行程名稱</label><input id="edit-event-name" maxlength="120" required></div>
         <div class="field"><label for="edit-event-date">日期</label><input id="edit-event-date" type="date" required></div>
+        <p class="field-hint event-repeat-notice" id="edit-event-repeat-notice" hidden>這是重複行程的一次出現；儲存或刪除只會影響這一天。</p>
         <div class="form-row category-row">
           <div class="field"><label for="edit-event-category">行程類別</label><input id="edit-event-category" type="text" list="edit-event-category-options" maxlength="40" required><datalist id="edit-event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
           <div class="field category-color-field"><label for="edit-event-category-color">類別顏色</label><input id="edit-event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
@@ -256,13 +242,24 @@
         <p class="field-hint">新類別建立時可選顏色；已建立的類別會沿用原色。</p>
         <label class="all-day-option" for="edit-event-all-day"><input id="edit-event-all-day" type="checkbox"> 全天行程</label>
         <div class="form-row event-time-fields" id="edit-event-time-fields">
-          <div class="field"><label for="edit-event-start">開始時間</label><input id="edit-event-start" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="09:30"></div>
-          <div class="field"><label for="edit-event-end">結束時間 <span class="optional">選填</span></label><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" placeholder="10:30"></div>
-          <p class="field-hint time-format-hint">輸入 0930 會自動整理成 09:30（24 小時制）。</p>
+          <div class="field"><label for="edit-event-start">開始時間</label><div class="time-input-group"><input id="edit-event-start" type="text" inputmode="numeric" maxlength="5" placeholder="09:30"><button class="time-picker-trigger" type="button" data-time-target="edit-event-start">選時間</button></div></div>
+          <div class="field"><label for="edit-event-end">結束時間 <span class="optional">選填</span></label><div class="time-input-group"><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="edit-event-end">選時間</button></div></div>
+          <p class="field-hint time-format-hint">可輸入 0930 或 13（會成為 13:00），也可用滾動選單挑選。</p>
         </div>
         <div class="field"><label for="edit-event-note">備註 <span class="optional">選填</span></label><textarea id="edit-event-note" maxlength="240" rows="3"></textarea></div>
         <p class="form-feedback" id="edit-event-feedback" aria-live="polite"></p>
         <div class="dialog-actions"><button class="small-button" id="cancel-event-edit" type="button">取消</button><button class="small-button is-primary" type="submit">儲存變更</button></div>
+      </form>
+    </dialog>
+    <dialog class="time-picker-dialog" id="time-picker-dialog" aria-labelledby="time-picker-title">
+      <form method="dialog" class="time-picker-form">
+        <h2 id="time-picker-title">選擇時間</h2>
+        <div class="time-wheel-row">
+          <label>小時<select id="time-picker-hour" aria-label="小時"></select></label>
+          <span aria-hidden="true">:</span>
+          <label>分鐘<select id="time-picker-minute" aria-label="分鐘"></select></label>
+        </div>
+        <div class="dialog-actions"><button class="small-button" value="cancel">取消</button><button class="small-button is-primary" id="time-picker-confirm" type="button">套用</button></div>
       </form>
     </dialog>
     <footer class="footer"><span>留一點餘裕，讓好事發生。</span><span>DAILY PLANNER <span aria-hidden="true">✳</span></span></footer>
