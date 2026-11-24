@@ -113,6 +113,8 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 const dateElement = document.querySelector('#today-date');
+const todayPageDate = document.querySelector('#today-page-date');
+const todayPageClock = document.querySelector('#today-page-clock');
 const calendarDate = document.querySelector('#calendar-date');
 const authMessage = document.querySelector('#auth-message');
 const userName = document.querySelector('#user-name');
@@ -143,9 +145,14 @@ const inboxEmpty = document.querySelector('#inbox-empty');
 const todayList = document.querySelector('#today-task-list');
 const todayCount = document.querySelector('#today-count');
 const todayEmpty = document.querySelector('#today-empty');
-const completedList = document.querySelector('#completed-task-list');
-const completedCount = document.querySelector('#completed-count');
-const completedEmpty = document.querySelector('#completed-empty');
+const todayCompletedList = document.querySelector('#today-completed-list');
+const todayCompletedCount = document.querySelector('#today-completed-count');
+const todayCompletedEmpty = document.querySelector('#today-completed-empty');
+const todayCompletedMore = document.querySelector('#today-completed-more');
+const inboxCompletedList = document.querySelector('#inbox-completed-list');
+const inboxCompletedCount = document.querySelector('#inbox-completed-count');
+const inboxCompletedEmpty = document.querySelector('#inbox-completed-empty');
+const inboxCompletedMore = document.querySelector('#inbox-completed-more');
 const xpLevel = document.querySelector('#xp-level');
 const xpTotal = document.querySelector('#xp-total');
 const xpProgress = document.querySelector('#xp-progress');
@@ -177,7 +184,7 @@ const scheduleForm = document.querySelector('#schedule-form');
 const scheduleFeedback = document.querySelector('#form-feedback');
 const eventDateInput = document.querySelector('#event-date');
 const eventCategoryInput = document.querySelector('#event-category');
-const eventCategoryOptions = document.querySelector('#event-category-options');
+const addEventCategoryButton = document.querySelector('#add-event-category');
 const eventCategoryColorInput = document.querySelector('#event-category-color');
 const eventAllDayInput = document.querySelector('#event-all-day');
 const eventStartInput = document.querySelector('#event-start-time');
@@ -203,7 +210,9 @@ const eventEditForm = document.querySelector('#event-edit-form');
 const eventEditName = document.querySelector('#edit-event-name');
 const eventEditDate = document.querySelector('#edit-event-date');
 const eventEditCategory = document.querySelector('#edit-event-category');
-const eventEditCategoryOptions = document.querySelector('#edit-event-category-options');
+const addEditEventCategoryButton = document.querySelector('#add-edit-event-category');
+const manageEventCategoriesButton = document.querySelector('#manage-event-categories');
+const manageEditEventCategoriesButton = document.querySelector('#manage-edit-event-categories');
 const eventEditCategoryColor = document.querySelector('#edit-event-category-color');
 const eventEditAllDay = document.querySelector('#edit-event-all-day');
 const eventEditStart = document.querySelector('#edit-event-start');
@@ -212,6 +221,15 @@ const eventEditTimeFields = document.querySelector('#edit-event-time-fields');
 const eventEditNote = document.querySelector('#edit-event-note');
 const eventEditFeedback = document.querySelector('#edit-event-feedback');
 const eventEditRepeatNotice = document.querySelector('#edit-event-repeat-notice');
+const categoryManagerDialog = document.querySelector('#category-manager-dialog');
+const categoryManagerForm = document.querySelector('#category-manager-form');
+const managedCategorySelect = document.querySelector('#managed-category-select');
+const managedCategoryEmpty = document.querySelector('#managed-category-empty');
+const categoryManagerFields = document.querySelector('#category-manager-fields');
+const managedCategoryName = document.querySelector('#managed-category-name');
+const managedCategoryColor = document.querySelector('#managed-category-color');
+const categoryManagerFeedback = document.querySelector('#category-manager-feedback');
+const deleteManagedCategoryButton = document.querySelector('#delete-managed-category');
 const timePickerDialog = document.querySelector('#time-picker-dialog');
 const timePickerHour = document.querySelector('#time-picker-hour');
 const timePickerMinute = document.querySelector('#time-picker-minute');
@@ -230,6 +248,8 @@ let currentUser = null;
 let tasks = [];
 let schedules = [];
 let categories = [];
+const pendingCategoryNames = new Set();
+const completionVisibleCounts = { today: 5, inbox: 5 };
 let editingTaskId = null;
 let editingEventId = null;
 let selectedDateKey = taipeiDateKey();
@@ -259,11 +279,20 @@ function taipeiDateKey(date = new Date()) {
 }
 
 function showToday() {
+  const now = new Date();
   const dateKey = taipeiDateKey();
   dateElement.dateTime = dateKey;
   dateElement.textContent = new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
-  }).format(new Date());
+  }).format(now);
+  todayPageDate.dateTime = dateKey;
+  todayPageDate.textContent = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long',
+  }).format(now);
+  todayPageClock.dateTime = now.toISOString();
+  todayPageClock.textContent = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).format(now);
 }
 
 function parseDateKey(dateKey) {
@@ -471,6 +500,8 @@ function setSignedOutView(message = '請使用 Google 登入以查看個人資�
   tasks = [];
   schedules = [];
   categories = [];
+  completionVisibleCounts.today = 5;
+  completionVisibleCounts.inbox = 5;
   xpStats = { totalXp: 0, completedCount: 0 };
   renderXpStats();
   renderCompletionHistory();
@@ -513,9 +544,14 @@ function getInboxTasks() {
     .sort((a, b) => getCreatedTime(b) - getCreatedTime(a) || a.id.localeCompare(b.id));
 }
 
-function getCompletedTasks() {
+function getCompletionSource(task) {
+  if (task.completionSource === 'today' || task.completionSource === 'inbox') return task.completionSource;
+  return task.plannedDate ? 'today' : 'inbox';
+}
+
+function getCompletedTasks(source) {
   return tasks
-    .filter((task) => task.status === 'done')
+    .filter((task) => task.status === 'done' && getCompletionSource(task) === source)
     .sort((a, b) => getTimestamp(b.completedAt) - getTimestamp(a.completedAt));
 }
 
@@ -548,16 +584,20 @@ function createActionButton(label, action, className = 'row-action') {
   return button;
 }
 
-function renderTaskRow(task, location, position = 0, total = 0) {
+function renderTaskRow(task, location, position = 0, total = 0, completionSource = '') {
   const row = document.createElement('li');
   row.className = 'task-item task-item-rich';
   if (location === 'today') row.classList.add('today-timeline-task', 'today-timeline-entry');
   row.dataset.id = task.id;
+  if (location === 'completed') row.dataset.completionSource = completionSource || getCompletionSource(task);
 
-  const toggle = document.createElement(task.status === 'done' ? 'span' : 'button');
+  const toggle = document.createElement('button');
   toggle.className = `task-check is-${task.status}`;
   if (task.status === 'done') {
-    toggle.setAttribute('aria-label', '已完成');
+    toggle.type = 'button';
+    toggle.dataset.action = 'undo-completion';
+    toggle.setAttribute('aria-label', `再次勾選以復原「${task.name}」的完成狀態`);
+    toggle.title = '再次勾選可復原完成';
     toggle.textContent = '✓';
   } else {
     toggle.type = 'button';
@@ -574,6 +614,17 @@ function renderTaskRow(task, location, position = 0, total = 0) {
   const note = document.createElement('p');
   note.textContent = taskDetail(task);
   copy.append(title, note);
+  if (location === 'completed') {
+    const completedDate = getTimestamp(task.completedAt)
+      ? new Intl.DateTimeFormat('zh-TW', {
+        timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(new Date(getTimestamp(task.completedAt)))
+      : '日期未提供';
+    const completionTime = document.createElement('span');
+    completionTime.className = 'completion-date';
+    completionTime.textContent = `完成日期：${completedDate}`;
+    copy.append(completionTime);
+  }
   if (location === 'today' && !(Number.isFinite(task.estimatedMinutes) && task.estimatedMinutes > 0)) {
     const estimateHint = document.createElement('span');
     estimateHint.className = 'timeline-duration-note';
@@ -594,10 +645,17 @@ function renderTaskRow(task, location, position = 0, total = 0) {
   } else if (location === 'today') {
     actions.append(createActionButton('移回清單', 'return-to-inbox'));
   } else {
-    actions.append(createActionButton('恢復待辦', 'undo-completion'));
+    actions.append(createActionButton('復原完成', 'undo-completion'));
   }
   actions.append(createActionButton('刪除', 'delete-task', 'row-action is-danger'));
   if (location === 'today') {
+    title.append(status);
+    const track = document.createElement('span');
+    track.className = 'timeline-task-track';
+    track.append(toggle);
+
+    const card = document.createElement('div');
+    card.className = 'timeline-task-card';
     const dragHandle = document.createElement('button');
     dragHandle.type = 'button';
     dragHandle.className = 'timeline-drag-handle';
@@ -605,7 +663,9 @@ function renderTaskRow(task, location, position = 0, total = 0) {
     dragHandle.setAttribute('aria-label', `拖曳調整「${task.name}」在今日時間線的位置`);
     dragHandle.title = '拖曳調整順序';
     dragHandle.textContent = '⠿';
-    row.append(dragHandle, toggle, copy, status, actions);
+    actions.prepend(dragHandle);
+    card.append(copy, actions);
+    row.append(track, card);
   } else {
     row.append(toggle, copy, status, actions);
   }
@@ -615,7 +675,6 @@ function renderTaskRow(task, location, position = 0, total = 0) {
 function renderTasks() {
   const inboxTasks = getInboxTasks();
   const todayTasks = getTodayTasks();
-  const completedTasks = getCompletedTasks();
 
   inboxList.replaceChildren();
   inboxTasks.forEach((task) => inboxList.append(renderTaskRow(task, 'inbox')));
@@ -626,10 +685,20 @@ function renderTasks() {
   renderTodayTimeline();
   todayEmpty.hidden = todayTasks.length > 0 || !currentUser;
 
-  completedList.replaceChildren();
-  completedTasks.forEach((task) => completedList.append(renderTaskRow(task, 'completed')));
-  completedCount.textContent = String(completedTasks.length);
-  completedEmpty.hidden = completedTasks.length > 0 || !currentUser;
+  renderCompletionLog('today', todayCompletedList, todayCompletedCount, todayCompletedEmpty, todayCompletedMore);
+  renderCompletionLog('inbox', inboxCompletedList, inboxCompletedCount, inboxCompletedEmpty, inboxCompletedMore);
+}
+
+function renderCompletionLog(source, list, countLabel, emptyMessage, moreButton) {
+  const completedTasks = getCompletedTasks(source);
+  const visibleCount = completionVisibleCounts[source];
+  list.replaceChildren(...completedTasks
+    .slice(0, visibleCount)
+    .map((task) => renderTaskRow(task, 'completed', 0, 0, source)));
+  countLabel.textContent = String(completedTasks.length);
+  emptyMessage.hidden = completedTasks.length > 0 || !currentUser;
+  moreButton.hidden = completedTasks.length <= visibleCount;
+  moreButton.textContent = `顯示更多（${completedTasks.length - visibleCount}）`;
 }
 
 function eventTimeLabel(event) {
@@ -737,9 +806,16 @@ function createTimelineGapRow(minutes, plannedMinutes, unestimatedCount) {
   const summary = plannedMinutes > minutes
     ? `行程間空檔 ${minutes} 分鐘・已估時 ${plannedMinutes} 分鐘，超出 ${plannedMinutes - minutes} 分鐘`
     : `行程間空檔 ${minutes} 分鐘・已估時 ${plannedMinutes} 分鐘`;
-  row.textContent = unestimatedCount
+  const labelText = unestimatedCount
     ? `${summary}・另有 ${unestimatedCount} 項未估時`
     : summary;
+  const track = document.createElement('span');
+  track.className = 'timeline-gap-track';
+  track.setAttribute('aria-hidden', 'true');
+  const label = document.createElement('span');
+  label.className = 'timeline-gap-copy';
+  label.textContent = labelText;
+  row.append(track, label);
   return row;
 }
 
@@ -758,7 +834,14 @@ function renderTodayTimeline() {
     const anchorId = eventIds.has(task.timelineAfterEventId) ? task.timelineAfterEventId : null;
     getBucket(anchorId).push(task);
   });
+  taskBuckets.forEach((bucket) => bucket.sort((a, b) => {
+    const aOrder = Number.isFinite(a.timelineOrder) ? a.timelineOrder : a.todayOrder;
+    const bOrder = Number.isFinite(b.timelineOrder) ? b.timelineOrder : b.todayOrder;
+    if (Number.isFinite(aOrder) && Number.isFinite(bOrder) && aOrder !== bOrder) return aOrder - bOrder;
+    return getCreatedTime(a) - getCreatedTime(b) || a.id.localeCompare(b.id);
+  }));
   todayList.replaceChildren();
+  todayList.classList.toggle('has-nodes', todayTasks.length + todayEvents.length > 0);
   updateCount(todayCount, todayTasks.length, '項待辦');
   updateCount(todayScheduleCount, todayEvents.length, '個行程');
   todayEmpty.hidden = todayTasks.length > 0 || !currentUser;
@@ -797,6 +880,7 @@ function renderTodayTimeline() {
     const nextEvent = todayEvents[index + 1] || null;
     if (index === 0) appendTasksForGap(null, item);
     const eventRow = createTodayEventRow(item);
+    if (todayList.children.length) eventRow.classList.add('has-previous-node');
     if (previousGapOverflow) eventRow.classList.add('has-overflow-before');
     todayList.append(eventRow);
     const gapPlan = appendTasksForGap(item, nextEvent);
@@ -827,17 +911,25 @@ function categoryTextColor(hexColor) {
 }
 
 function refreshEventCategoryOptions() {
+  const savedNames = new Set(categories.map((item) => item.name));
+  pendingCategoryNames.forEach((name) => {
+    if (savedNames.has(name)) pendingCategoryNames.delete(name);
+  });
   const categoryNames = [...new Set([
     ...defaultEventCategories,
     ...categories.map((item) => item.name),
     ...schedules.map((event) => String(event.category || '').trim()).filter(Boolean),
+    ...pendingCategoryNames,
   ])];
-  [eventCategoryOptions, eventEditCategoryOptions].forEach((list) => {
-    list.replaceChildren(...categoryNames.map((category) => {
+  [eventCategoryInput, eventEditCategory].forEach((select) => {
+    const selectedName = select.value;
+    select.replaceChildren(...categoryNames.map((category) => {
       const option = document.createElement('option');
       option.value = category;
+      option.textContent = category;
       return option;
     }));
+    if (categoryNames.includes(selectedName)) select.value = selectedName;
   });
 }
 
@@ -858,6 +950,7 @@ async function saveEventCategory(name, color) {
   } else {
     await setDoc(categoryRef, { ...categoryData, createdAt: serverTimestamp() });
   }
+  pendingCategoryNames.delete(name);
 }
 
 function syncCategoryColor(categoryInput, colorInput) {
@@ -872,6 +965,130 @@ function syncCategoryColor(categoryInput, colorInput) {
     colorInput.disabled = !name;
     colorInput.title = name ? '新類別可選擇顏色' : '';
   }
+}
+
+function addEventCategory(select, colorInput) {
+  const name = window.prompt('輸入新類別名稱（最多 40 字）：')?.trim().slice(0, 40);
+  if (!name) return;
+  const existing = [...select.options].some((option) => option.value === name);
+  if (!existing) pendingCategoryNames.add(name);
+  refreshEventCategoryOptions();
+  select.value = name;
+  syncCategoryColor(select, colorInput);
+}
+
+function managedEventCategories() {
+  return categories
+    .filter((item) => item.name && !defaultEventCategories.includes(item.name))
+    .sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+}
+
+function refreshCategoryManagerOptions(selectedName = managedCategorySelect.value) {
+  const items = managedEventCategories();
+  managedCategorySelect.replaceChildren(...items.map((item) => {
+    const option = document.createElement('option');
+    option.value = item.name;
+    option.textContent = item.name;
+    return option;
+  }));
+  if (items.some((item) => item.name === selectedName)) managedCategorySelect.value = selectedName;
+  else if (items.length) managedCategorySelect.value = items[0].name;
+
+  const hasCategories = items.length > 0;
+  managedCategorySelect.disabled = !hasCategories;
+  managedCategoryFields.hidden = !hasCategories;
+  managedCategoryEmpty.hidden = hasCategories;
+  managedCategoryName.disabled = !hasCategories;
+  managedCategoryColor.disabled = !hasCategories;
+  deleteManagedCategoryButton.disabled = !hasCategories;
+  document.querySelector('#save-managed-category').disabled = !hasCategories;
+  if (hasCategories) loadManagedCategoryFields();
+}
+
+function loadManagedCategoryFields() {
+  const category = managedEventCategories().find((item) => item.name === managedCategorySelect.value);
+  if (!category) return;
+  managedCategoryName.value = category.name;
+  managedCategoryColor.value = /^#[0-9a-f]{6}$/i.test(category.color || '')
+    ? category.color
+    : eventCategoryColor(category.name);
+  categoryManagerFeedback.textContent = '';
+}
+
+function openCategoryManager() {
+  categoryManagerFeedback.textContent = '';
+  refreshCategoryManagerOptions();
+  categoryManagerDialog.showModal();
+}
+
+function applyManagedCategoryChange(previousName, nextName, previousSelections = [eventCategoryInput.value, eventEditCategory.value]) {
+  [eventCategoryInput, eventEditCategory].forEach((select, index) => {
+    select.value = previousSelections[index] === previousName ? nextName : previousSelections[index];
+  });
+  syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
+  syncCategoryColor(eventEditCategory, eventEditCategoryColor);
+}
+
+async function updateEventCategoryReferences(referencedEvents, categoryName) {
+  for (let index = 0; index < referencedEvents.length; index += 400) {
+    const batch = writeBatch(db);
+    referencedEvents.slice(index, index + 400).forEach((eventItem) => {
+      batch.update(doc(db, 'users', currentUser.uid, 'events', eventItem.id), {
+        category: categoryName,
+        updatedAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+  }
+  const referencedIds = new Set(referencedEvents.map((eventItem) => eventItem.id));
+  schedules = schedules.map((eventItem) => referencedIds.has(eventItem.id)
+    ? { ...eventItem, category: categoryName }
+    : eventItem);
+}
+
+async function saveManagedCategory(oldName, newName, color) {
+  const existingCategory = categories.find((item) => item.name === oldName);
+  if (!existingCategory) throw new Error('找不到這個自訂類別，請重新整理後再試。');
+  const normalizedName = newName.trim().slice(0, 40);
+  if (!normalizedName) throw new Error('請輸入類別名稱。');
+  if (normalizedName !== oldName && (
+    defaultEventCategories.includes(normalizedName)
+    || categories.some((item) => item.name === normalizedName)
+  )) throw new Error('這個類別名稱已存在，請換一個名稱。');
+  if (!/^#[0-9a-f]{6}$/i.test(color || '')) throw new Error('請選擇有效的類別顏色。');
+
+  const oldRef = doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(oldName));
+  const newRef = doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(normalizedName));
+  if (normalizedName === oldName) {
+    await updateDoc(oldRef, { name: normalizedName, color, updatedAt: serverTimestamp() });
+    return normalizedName;
+  }
+
+  await setDoc(newRef, {
+    name: normalizedName,
+    color,
+    createdAt: existingCategory.createdAt || serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  const referencedEvents = schedules.filter((item) => item.category === oldName);
+  await updateEventCategoryReferences(referencedEvents, normalizedName);
+  await deleteDoc(oldRef);
+  pendingCategoryNames.delete(oldName);
+  pendingCategoryNames.delete(normalizedName);
+  return normalizedName;
+}
+
+async function deleteManagedCategory(name) {
+  const category = managedEventCategories().find((item) => item.name === name);
+  if (!category) throw new Error('找不到這個自訂類別，請重新整理後再試。');
+  const referencedEvents = schedules.filter((item) => item.category === name);
+  if (referencedEvents.length) {
+    await saveEventCategory('其他', eventCategoryColor('其他'));
+    await updateEventCategoryReferences(referencedEvents, '其他');
+  }
+  await deleteDoc(doc(db, 'users', currentUser.uid, 'categories', encodeURIComponent(name)));
+  categories = categories.filter((item) => item.name !== name);
+  pendingCategoryNames.delete(name);
 }
 
 function renderCalendar() {
@@ -1035,6 +1252,67 @@ calendarTodayButton.addEventListener('click', () => setSelectedDate(taipeiDateKe
 eventAllDayInput.addEventListener('change', () => updateEventTimeFields(eventAllDayInput, eventTimeFields, eventStartInput, eventEndInput));
 eventCategoryInput.addEventListener('change', () => syncCategoryColor(eventCategoryInput, eventCategoryColorInput));
 eventEditCategory.addEventListener('change', () => syncCategoryColor(eventEditCategory, eventEditCategoryColor));
+addEventCategoryButton.addEventListener('click', () => addEventCategory(eventCategoryInput, eventCategoryColorInput));
+addEditEventCategoryButton.addEventListener('click', () => addEventCategory(eventEditCategory, eventEditCategoryColor));
+manageEventCategoriesButton.addEventListener('click', openCategoryManager);
+manageEditEventCategoriesButton.addEventListener('click', openCategoryManager);
+managedCategorySelect.addEventListener('change', loadManagedCategoryFields);
+categoryManagerForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!currentUser) return;
+  const previousName = managedCategorySelect.value;
+  const previousSelections = [eventCategoryInput.value, eventEditCategory.value];
+  const nextName = managedCategoryName.value.trim().slice(0, 40);
+  const color = managedCategoryColor.value;
+  const saveButton = document.querySelector('#save-managed-category');
+  saveButton.disabled = true;
+  categoryManagerFeedback.textContent = '正在儲存類別…';
+  try {
+    const savedName = await saveManagedCategory(previousName, nextName, color);
+    categories = categories.filter((item) => item.name !== previousName);
+    categories.push({ name: savedName, color });
+    pendingCategoryNames.delete(previousName);
+    pendingCategoryNames.delete(savedName);
+    refreshEventCategoryOptions();
+    applyManagedCategoryChange(previousName, savedName, previousSelections);
+    refreshCategoryManagerOptions(savedName);
+    categoryManagerDialog.close();
+  } catch (error) {
+    console.error('行程類別儲存失敗：', error.code || error.message);
+    categoryManagerFeedback.textContent = error.message || '儲存類別失敗，請確認連線後重試。';
+  } finally {
+    saveButton.disabled = !managedEventCategories().length;
+  }
+});
+deleteManagedCategoryButton.addEventListener('click', async () => {
+  const name = managedCategorySelect.value;
+  if (!name) return;
+  const previousSelections = [eventCategoryInput.value, eventEditCategory.value];
+  const affectedCount = schedules.filter((item) => item.category === name).length;
+  const affectedNotice = affectedCount
+    ? `使用此類別的 ${affectedCount} 筆行程會改為「其他」，行程本身會保留。`
+    : '目前沒有行程使用這個類別。';
+  if (!window.confirm(`確定刪除自訂類別「${name}」？${affectedNotice}`)) return;
+  deleteManagedCategoryButton.disabled = true;
+  categoryManagerFeedback.textContent = '正在刪除類別…';
+  try {
+    await deleteManagedCategory(name);
+    refreshEventCategoryOptions();
+    applyManagedCategoryChange(name, '其他', previousSelections);
+    refreshCategoryManagerOptions();
+    if (!managedEventCategories().length) categoryManagerFeedback.textContent = '類別已刪除。';
+  } catch (error) {
+    console.error('行程類別刪除失敗：', error.code || error.message);
+    categoryManagerFeedback.textContent = error.message || '刪除類別失敗，請確認連線後重試。';
+  } finally {
+    deleteManagedCategoryButton.disabled = !managedEventCategories().length;
+  }
+});
+document.querySelector('#close-category-manager').addEventListener('click', () => categoryManagerDialog.close());
+document.querySelector('#cancel-category-manager').addEventListener('click', () => categoryManagerDialog.close());
+categoryManagerDialog.addEventListener('click', (event) => {
+  if (event.target === categoryManagerDialog) categoryManagerDialog.close();
+});
 eventRepeatFrequency.addEventListener('change', updateRepeatFields);
 eventDateInput.addEventListener('change', updateRepeatFields);
 for (const timeInput of [eventStartInput, eventEndInput, eventEditStart, eventEditEnd]) {
@@ -1099,6 +1377,8 @@ function startUserData(user) {
   tasks = [];
   schedules = [];
   categories = [];
+  completionVisibleCounts.today = 5;
+  completionVisibleCounts.inbox = 5;
   xpStats = { totalXp: 0, completedCount: 0 };
   renderXpStats();
   renderCompletionHistory();
@@ -1140,7 +1420,8 @@ function startUserData(user) {
     categories = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
     refreshEventCategoryOptions();
     syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
-    if (eventEditDialog.open) syncCategoryColor(eventEditCategory, eventEditCategoryColor);
+    syncCategoryColor(eventEditCategory, eventEditCategoryColor);
+    if (categoryManagerDialog.open) refreshCategoryManagerOptions(managedCategorySelect.value);
     renderSchedules();
   }, showDataError);
 
@@ -1167,7 +1448,7 @@ function startUserData(user) {
   });
 }
 
-async function saveTaskStatus(task, status) {
+async function saveTaskStatus(task, status, source = 'inbox') {
   const uid = currentUser.uid;
   const taskRef = doc(db, 'users', uid, 'tasks', task.id);
   const completionRef = completionRecordDocument(uid, task.id);
@@ -1177,15 +1458,19 @@ async function saveTaskStatus(task, status) {
     const taskSnapshot = await transaction.get(taskRef);
     if (!taskSnapshot.exists()) throw new Error('找不到這項待辦。');
     const currentTask = taskSnapshot.data();
-    const completionSnapshot = status === 'done' || currentTask.status === 'done'
-      ? await transaction.get(completionRef)
-      : null;
-    const isNewCompletion = status === 'done' && currentTask.status !== 'done'
-      && !completionSnapshot?.exists();
-    const isLegacyCompletion = currentTask.status === 'done' && status !== 'done'
-      && !completionSnapshot?.exists();
+    if (status !== 'done') {
+      if (currentTask.status === 'done') return;
+      transaction.update(taskRef, {
+        status,
+        completedAt: null,
+        updatedAt: serverTimestamp(),
+      });
+      return;
+    }
 
-    if (isNewCompletion) {
+    if (currentTask.status === 'done') return;
+    const completionSnapshot = await transaction.get(completionRef);
+    if (!completionSnapshot.exists()) {
       const statsSnapshot = await transaction.get(statsRef);
       const savedStats = statsSnapshot.exists() ? statsSnapshot.data() : {};
       const totalXp = Number.isSafeInteger(savedStats.totalXp) && savedStats.totalXp > 0
@@ -1204,38 +1489,84 @@ async function saveTaskStatus(task, status) {
         taskName: currentTask.name || task.name || '已刪除待辦',
         xpEarned: 10,
         legacy: false,
+        source,
+        restoreState: {
+          plannedDate: currentTask.plannedDate || null,
+          todayOrder: Number.isFinite(currentTask.todayOrder) ? currentTask.todayOrder : null,
+          timelineAfterEventId: currentTask.timelineAfterEventId || null,
+          timelineOrder: Number.isFinite(currentTask.timelineOrder) ? currentTask.timelineOrder : null,
+        },
         completedAt: serverTimestamp(),
         recordedAt: serverTimestamp(),
       });
-    } else if (isLegacyCompletion) {
-      const statsSnapshot = await transaction.get(statsRef);
-      const savedStats = statsSnapshot.exists() ? statsSnapshot.data() : {};
+    }
+
+    transaction.update(taskRef, {
+      status: 'done',
+      completionSource: source,
+      completedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+async function undoTaskCompletion(task) {
+  const uid = currentUser.uid;
+  const taskRef = doc(db, 'users', uid, 'tasks', task.id);
+  const completionRef = completionRecordDocument(uid, task.id);
+  const statsRef = xpStatsDocument(uid);
+
+  await runTransaction(db, async (transaction) => {
+    const taskSnapshot = await transaction.get(taskRef);
+    if (!taskSnapshot.exists()) throw new Error('找不到這項待辦。');
+    const currentTask = taskSnapshot.data();
+    if (currentTask.status !== 'done') return;
+
+    const completionSnapshot = await transaction.get(completionRef);
+    const completion = completionSnapshot.exists() ? completionSnapshot.data() : {};
+    const restoreState = completion.restoreState || {};
+    const plannedDate = Object.hasOwn(restoreState, 'plannedDate')
+      ? restoreState.plannedDate
+      : (currentTask.plannedDate || null);
+    const todayOrder = Object.hasOwn(restoreState, 'todayOrder')
+      ? restoreState.todayOrder
+      : (Number.isFinite(currentTask.todayOrder) ? currentTask.todayOrder : null);
+    const timelineAfterEventId = Object.hasOwn(restoreState, 'timelineAfterEventId')
+      ? restoreState.timelineAfterEventId
+      : (currentTask.timelineAfterEventId || null);
+    const timelineOrder = Object.hasOwn(restoreState, 'timelineOrder')
+      ? restoreState.timelineOrder
+      : (Number.isFinite(currentTask.timelineOrder) ? currentTask.timelineOrder : null);
+
+    let statsSnapshot = null;
+    if (completionSnapshot.exists()) statsSnapshot = await transaction.get(statsRef);
+    if (completionSnapshot.exists()) {
+      const savedStats = statsSnapshot?.exists() ? statsSnapshot.data() : {};
       const totalXp = Number.isSafeInteger(savedStats.totalXp) && savedStats.totalXp > 0
         ? savedStats.totalXp
         : 0;
       const completedCount = Number.isSafeInteger(savedStats.completedCount) && savedStats.completedCount > 0
         ? savedStats.completedCount
         : 0;
+      const xpEarned = Number.isSafeInteger(completion.xpEarned) && completion.xpEarned > 0
+        ? completion.xpEarned
+        : 0;
       transaction.set(statsRef, {
-        totalXp,
-        completedCount: completedCount + 1,
+        totalXp: Math.max(0, totalXp - xpEarned),
+        completedCount: Math.max(0, completedCount - 1),
         updatedAt: serverTimestamp(),
       }, { merge: true });
-      transaction.set(completionRef, {
-        taskId: task.id,
-        taskName: currentTask.name || task.name || '已刪除待辦',
-        xpEarned: 0,
-        legacy: true,
-        completedAt: currentTask.completedAt || serverTimestamp(),
-        recordedAt: serverTimestamp(),
-      });
+      transaction.delete(completionRef);
     }
 
     transaction.update(taskRef, {
-      status,
-      completedAt: status === 'done'
-        ? (currentTask.status === 'done' ? currentTask.completedAt || serverTimestamp() : serverTimestamp())
-        : null,
+      status: 'pending',
+      plannedDate,
+      todayOrder,
+      timelineAfterEventId,
+      timelineOrder,
+      completionSource: null,
+      completedAt: null,
       updatedAt: serverTimestamp(),
     });
   });
@@ -1372,12 +1703,28 @@ function closeEventEditor() {
 
 function validTimeRange(allDay, start, end) {
   const validTime = (value) => /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
-  return allDay || (validTime(start) && (!end || (validTime(end) && end > start)));
+  return allDay || (validTime(start) && validTime(end) && end > start);
+}
+
+function defaultEventEndTime(startTime) {
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(startTime || '')) return '';
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const endMinutes = hours * 60 + minutes + 60;
+  if (endMinutes >= 24 * 60) return '';
+  return `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
 }
 
 async function handleTaskAction(event) {
   const button = event.target.closest('[data-action]');
   if (!button || !currentUser) return;
+  if (button.dataset.action === 'show-more-completions') {
+    const source = button.dataset.source;
+    if (source === 'today' || source === 'inbox') {
+      completionVisibleCounts[source] += 5;
+      renderTasks();
+    }
+    return;
+  }
   const row = button.closest('.task-item');
   const task = tasks.find((item) => item.id === row?.dataset.id);
   if (!task) return;
@@ -1387,11 +1734,11 @@ async function handleTaskAction(event) {
       case 'cycle-status': {
         const order = ['pending', 'progress', 'done'];
         const status = order[(order.indexOf(task.status) + 1) % order.length];
-        await saveTaskStatus(task, status);
+        await saveTaskStatus(task, status, event.currentTarget === inboxList ? 'inbox' : 'today');
         break;
       }
       case 'undo-completion':
-        await saveTaskStatus(task, 'pending');
+        await undoTaskCompletion(task);
         break;
       case 'mark-pending':
         await saveTaskStatus(task, 'pending');
@@ -1652,7 +1999,10 @@ taskForm.addEventListener('submit', async (event) => {
 
 inboxList.addEventListener('click', handleTaskAction);
 todayList.addEventListener('click', handleTaskAction);
-completedList.addEventListener('click', handleTaskAction);
+todayCompletedList.addEventListener('click', handleTaskAction);
+inboxCompletedList.addEventListener('click', handleTaskAction);
+todayCompletedMore.addEventListener('click', handleTaskAction);
+inboxCompletedMore.addEventListener('click', handleTaskAction);
 
 function restoreTimelineDrag() {
   if (!activeTimelineDrag) return;
@@ -1779,13 +2129,15 @@ scheduleForm.addEventListener('submit', async (event) => {
   const category = eventCategoryInput.value.trim();
   const allDay = eventAllDayInput.checked;
   const startTime = allDay ? '' : eventStartInput.value;
-  const endTime = allDay ? '' : eventEndInput.value;
+  const endWasDefaulted = !allDay && !eventEndInput.value;
+  const endTime = allDay ? '' : (eventEndInput.value || defaultEventEndTime(startTime));
   const note = document.querySelector('#event-note').value.trim();
   const repeatFrequency = eventRepeatFrequency.value;
   const repeatInterval = repeatFrequency === 'weekly' ? 1 : Number(eventRepeatInterval.value);
   const repeatUnit = repeatFrequency === 'weekly' ? 'week' : eventRepeatUnit.value;
   if (!name || !date || !category) { scheduleFeedback.textContent = '請填寫行程名稱、日期與類別。'; return; }
-  if (!validTimeRange(allDay, startTime, endTime)) { scheduleFeedback.textContent = '開始時間請用 24 小時制；結束時間可留空，如有填寫須晚於開始時間。'; return; }
+  if (!allDay && !endTime) { scheduleFeedback.textContent = '留空結束時間時會自動加一小時；開始時間需早於 23:00，或請填寫結束時間。'; return; }
+  if (!validTimeRange(allDay, startTime, endTime)) { scheduleFeedback.textContent = '開始和結束時間請用 24 小時制，結束時間須晚於開始時間。'; return; }
   let occurrenceDates;
   try {
     occurrenceDates = recurrenceDates(date, eventRepeatUntil.value, repeatFrequency, repeatInterval, repeatUnit);
@@ -1813,10 +2165,12 @@ scheduleForm.addEventListener('submit', async (event) => {
       });
     });
     await batch.commit();
+    const defaultEndNotice = endWasDefaulted ? `未輸入結束時間，已預設為 ${endTime}。` : '';
     scheduleFeedback.textContent = repeatFrequency === 'none'
-      ? `已加入「${name}」並儲存至你的帳號。`
-      : `已加入「${name}」，共建立 ${occurrenceDates.length} 次行程；之後可分別編輯或刪除。`;
+      ? `已加入「${name}」並儲存至你的帳號。${defaultEndNotice}`
+      : `已加入「${name}」，共建立 ${occurrenceDates.length} 次行程；之後可分別編輯或刪除。${defaultEndNotice}`;
     scheduleForm.reset();
+    eventCategoryInput.value = '其他';
     eventAllDayInput.checked = false;
     updateRepeatFields();
     syncCategoryColor(eventCategoryInput, eventCategoryColorInput);
@@ -1858,9 +2212,10 @@ eventEditForm.addEventListener('submit', async (event) => {
   const category = eventEditCategory.value.trim();
   const allDay = eventEditAllDay.checked;
   const startTime = allDay ? '' : eventEditStart.value;
-  const endTime = allDay ? '' : eventEditEnd.value;
+  const endTime = allDay ? '' : (eventEditEnd.value || defaultEventEndTime(startTime));
   if (!name || !date || !category) { eventEditFeedback.textContent = '請填寫行程名稱、日期與類別。'; return; }
-  if (!validTimeRange(allDay, startTime, endTime)) { eventEditFeedback.textContent = '開始時間請用 24 小時制；結束時間可留空，如有填寫須晚於開始時間。'; return; }
+  if (!allDay && !endTime) { eventEditFeedback.textContent = '留空結束時間時會自動加一小時；開始時間需早於 23:00，或請填寫結束時間。'; return; }
+  if (!validTimeRange(allDay, startTime, endTime)) { eventEditFeedback.textContent = '開始和結束時間請用 24 小時制，結束時間須晚於開始時間。'; return; }
   try {
     await saveEventCategory(category, eventEditCategoryColor.value);
     await updateDoc(doc(db, 'users', currentUser.uid, 'events', editingEventId), {
@@ -1879,6 +2234,7 @@ document.querySelector('#cancel-event-edit').addEventListener('click', closeEven
 eventEditDialog.addEventListener('click', (event) => { if (event.target === eventEditDialog) closeEventEditor(); });
 
 showToday();
+window.setInterval(showToday, 1000);
 setActiveView('today');
 let redirectErrorMessage = '';
 onAuthStateChanged(auth, (user) => {

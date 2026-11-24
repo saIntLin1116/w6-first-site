@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=timeline-xp-repeat-20261125-1">
-  <script type="module" src="script.js?v=timeline-xp-repeat-20261125-1"></script>
+  <link rel="stylesheet" href="style.css?v=planner-ui-20261125-7">
+  <script type="module" src="script.js?v=planner-ui-20261125-7"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -27,7 +27,6 @@
         <p class="intro-subtitle">整理行程、完成待辦，留一點空間給自己。</p>
       </div>
       <div class="date-card">
-        <span class="date-label">今天是</span>
         <time id="today-date" datetime="">載入日期中</time>
       </div>
     </section>
@@ -60,7 +59,7 @@
 
       <section class="workspace-view" id="today-view" aria-labelledby="today-view-title">
         <div class="section-heading page-heading">
-          <div><p class="section-kicker">YOUR DAY</p><h2 id="today-view-title">今日要推進的事</h2></div>
+          <div><p class="section-kicker">YOUR DAY</p><div class="today-heading-line"><h2 id="today-view-title">今日要推進的事</h2><time class="today-current-time" id="today-page-clock" aria-label="目前時間"></time></div><time class="today-current-date" id="today-page-date" aria-label="今日日期"></time></div>
         </div>
         <section class="panel today-timeline-panel" aria-labelledby="today-timeline-title">
           <div class="section-heading today-timeline-heading">
@@ -92,9 +91,10 @@
           </div>
         </section>
         <details class="completed-panel">
-          <summary>已完成紀錄 <span id="completed-count">0</span></summary>
-          <ul class="task-list task-list-large" id="completed-task-list" aria-live="polite"></ul>
-          <p class="empty-message" id="completed-empty" hidden>還沒有完成的任務。</p>
+          <summary>今日頁完成紀錄 <span id="today-completed-count">0</span></summary>
+          <ul class="task-list task-list-large" id="today-completed-list" aria-live="polite"></ul>
+          <p class="empty-message" id="today-completed-empty" hidden>今日頁還沒有完成的待辦。</p>
+          <button class="small-button completion-more-button" id="today-completed-more" type="button" data-action="show-more-completions" data-source="today" hidden>顯示更多</button>
         </details>
       </section>
 
@@ -112,6 +112,12 @@
         <p class="form-feedback" id="task-feedback" aria-live="polite"></p>
         <ul class="task-list task-list-large" id="inbox-task-list" aria-live="polite"></ul>
         <p class="empty-message" id="inbox-empty" hidden>清單目前是空的。</p>
+        <details class="completed-panel">
+          <summary>清單頁完成紀錄 <span id="inbox-completed-count">0</span></summary>
+          <ul class="task-list task-list-large" id="inbox-completed-list" aria-live="polite"></ul>
+          <p class="empty-message" id="inbox-completed-empty" hidden>清單頁還沒有完成的待辦。</p>
+          <button class="small-button completion-more-button" id="inbox-completed-more" type="button" data-action="show-more-completions" data-source="inbox" hidden>顯示更多</button>
+        </details>
       </section>
 
       <section class="workspace-view" id="calendar-view" aria-labelledby="calendar-title" hidden>
@@ -159,14 +165,14 @@
               <p class="field-hint repeat-hint" id="event-repeat-hint" hidden>每次重複會建立獨立行程，可分別編輯或刪除。</p>
             </div>
             <div class="form-row category-row">
-              <div class="field"><label for="event-category">行程類別</label><input id="event-category" name="event-category" type="text" list="event-category-options" maxlength="40" value="其他" required><datalist id="event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
+              <div class="field"><label for="event-category">行程類別</label><div class="category-select-control"><select id="event-category" name="event-category" required><option value="課業">課業</option><option value="工作">工作</option><option value="生活">生活</option><option value="社交">社交</option><option value="其他" selected>其他</option></select><button class="small-button category-add-button" id="add-event-category" type="button">新增</button><button class="small-button category-add-button" id="manage-event-categories" type="button">管理</button></div></div>
               <div class="field category-color-field"><label for="event-category-color">類別顏色</label><input id="event-category-color" name="event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
             </div>
             <p class="field-hint">建立新類別時選擇顏色；之後使用同一類別會沿用此色。</p>
             <label class="all-day-option" for="event-all-day"><input id="event-all-day" name="event-all-day" type="checkbox"> 全天行程</label>
             <div class="form-row event-time-fields" id="event-time-fields">
               <div class="field"><label for="event-start-time">開始時間</label><div class="time-input-group"><input id="event-start-time" name="event-start-time" type="text" inputmode="numeric" maxlength="5" placeholder="09:30" required><button class="time-picker-trigger" type="button" data-time-target="event-start-time">選時間</button></div></div>
-              <div class="field"><label for="event-end-time">結束時間 <span class="optional">選填</span></label><div class="time-input-group"><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="event-end-time">選時間</button></div></div>
+              <div class="field"><label for="event-end-time">結束時間 <span class="optional">留空預設一小時</span></label><div class="time-input-group"><input id="event-end-time" name="event-end-time" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="event-end-time">選時間</button></div></div>
               <p class="field-hint time-format-hint">可輸入 0930 或 13（會成為 13:00），也可用滾動選單挑選。</p>
             </div>
             <div class="field"><label for="event-note">備註 <span class="optional">選填</span></label><input id="event-note" name="event-note" type="text" maxlength="240" placeholder="地點或想記下的小提醒"></div>
@@ -236,19 +242,36 @@
         <div class="field"><label for="edit-event-date">日期</label><input id="edit-event-date" type="date" required></div>
         <p class="field-hint event-repeat-notice" id="edit-event-repeat-notice" hidden>這是重複行程的一次出現；儲存或刪除只會影響這一天。</p>
         <div class="form-row category-row">
-          <div class="field"><label for="edit-event-category">行程類別</label><input id="edit-event-category" type="text" list="edit-event-category-options" maxlength="40" required><datalist id="edit-event-category-options"><option value="課業"></option><option value="工作"></option><option value="生活"></option><option value="社交"></option><option value="其他"></option></datalist></div>
+          <div class="field"><label for="edit-event-category">行程類別</label><div class="category-select-control"><select id="edit-event-category" required><option value="課業">課業</option><option value="工作">工作</option><option value="生活">生活</option><option value="社交">社交</option><option value="其他">其他</option></select><button class="small-button category-add-button" id="add-edit-event-category" type="button">新增</button><button class="small-button category-add-button" id="manage-edit-event-categories" type="button">管理</button></div></div>
           <div class="field category-color-field"><label for="edit-event-category-color">類別顏色</label><input id="edit-event-category-color" type="color" value="#85858b" aria-label="選擇類別顏色"></div>
         </div>
         <p class="field-hint">新類別建立時可選顏色；已建立的類別會沿用原色。</p>
         <label class="all-day-option" for="edit-event-all-day"><input id="edit-event-all-day" type="checkbox"> 全天行程</label>
         <div class="form-row event-time-fields" id="edit-event-time-fields">
           <div class="field"><label for="edit-event-start">開始時間</label><div class="time-input-group"><input id="edit-event-start" type="text" inputmode="numeric" maxlength="5" placeholder="09:30"><button class="time-picker-trigger" type="button" data-time-target="edit-event-start">選時間</button></div></div>
-          <div class="field"><label for="edit-event-end">結束時間 <span class="optional">選填</span></label><div class="time-input-group"><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="edit-event-end">選時間</button></div></div>
+          <div class="field"><label for="edit-event-end">結束時間 <span class="optional">留空預設一小時</span></label><div class="time-input-group"><input id="edit-event-end" type="text" inputmode="numeric" maxlength="5" placeholder="10:30"><button class="time-picker-trigger" type="button" data-time-target="edit-event-end">選時間</button></div></div>
           <p class="field-hint time-format-hint">可輸入 0930 或 13（會成為 13:00），也可用滾動選單挑選。</p>
         </div>
         <div class="field"><label for="edit-event-note">備註 <span class="optional">選填</span></label><textarea id="edit-event-note" maxlength="240" rows="3"></textarea></div>
         <p class="form-feedback" id="edit-event-feedback" aria-live="polite"></p>
         <div class="dialog-actions"><button class="small-button" id="cancel-event-edit" type="button">取消</button><button class="small-button is-primary" type="submit">儲存變更</button></div>
+      </form>
+    </dialog>
+    <dialog class="edit-dialog category-manager-dialog" id="category-manager-dialog" aria-labelledby="category-manager-title">
+      <form id="category-manager-form">
+        <div class="section-heading">
+          <div><p class="section-kicker">EVENT CATEGORIES</p><h2 id="category-manager-title">管理自訂類別</h2></div>
+          <button class="delete-button dialog-close" id="close-category-manager" type="button" aria-label="關閉類別管理">×</button>
+        </div>
+        <p class="field-hint">重新命名會同步更新現有行程。刪除類別時，使用中的行程會改為「其他」，行程本身會保留。</p>
+        <div class="field"><label for="managed-category-select">選擇類別</label><select id="managed-category-select"></select></div>
+        <p class="empty-message" id="managed-category-empty" hidden>目前沒有已儲存的自訂類別。</p>
+        <div class="category-manager-fields" id="category-manager-fields">
+          <div class="field"><label for="managed-category-name">類別名稱</label><input id="managed-category-name" maxlength="40" required></div>
+          <div class="field category-color-field"><label for="managed-category-color">類別顏色</label><input id="managed-category-color" type="color" value="#85858b"></div>
+        </div>
+        <p class="form-feedback" id="category-manager-feedback" aria-live="polite"></p>
+        <div class="dialog-actions"><button class="row-action is-danger" id="delete-managed-category" type="button">刪除類別</button><button class="small-button" id="cancel-category-manager" type="button">取消</button><button class="small-button is-primary" id="save-managed-category" type="submit">儲存變更</button></div>
       </form>
     </dialog>
     <dialog class="time-picker-dialog" id="time-picker-dialog" aria-labelledby="time-picker-title">
