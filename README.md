@@ -22,7 +22,7 @@
 - 待辦可加入今日、移回清單，並在今日畫面上移或下移調整順序。
 - 狀態包含「未開始、進行中、已完成」；點選狀態可切換，清單中的進行中待辦也可退回未開始。
 - 今日畫面會把排序第一項放在「現在先做這一件」，可直接標記完成、編輯資訊或移回清單。
-- 今日時間線會同時顯示今日待辦與行事曆的今日行程；待辦保留原排序和預估時長、不編固定時間，行程單向顯示且沿用分類顏色。此功能程式已加入本機工作目錄，尚未操作驗收或部署。
+- 今日時間線會同時顯示今日待辦與行事曆的今日行程；待辦保留原排序和預估時長、不編固定時間，行程單向顯示且沿用分類顏色。此功能已部署至正式 Pages；尚未完成畫面與操作驗收。
 - 可為待辦設定選填的截止日期、預估分鐘、主觀難度與備註。
 - 已完成待辦會收在完成紀錄中，可恢復為待辦。
 - 清單顯示未安排待辦數量，今日畫面顯示今日任務數量。
@@ -61,7 +61,7 @@
 
 ## 驗收進度
 
-截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。今日時間線已在本機程式加入，但尚未本機預覽、操作驗收或部署。正式 Pages 已部署 Gemini 對話視窗；最新聊天與今日建議測試均失敗，Console 記錄 `fetch-error` 和 App Check token 的 `403 appCheck/initial-throttle`／`appCheck/throttled`。Firebase Console 註冊的 site key 與程式一致，Google Cloud Fraud Defense 金鑰也列出正式網站網域並顯示受保護；403 原始原因仍待查，也未確認本次請求是否抵達 AI Logic。先前 AI Logic 的過載／逾時 trace 不可直接歸因到本次測試。Gemini 兩項功能仍未驗收通過。XP 程式已存在但待功能驗收。
+截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。今日時間線已部署至正式 Pages，HTML 版本標記已核對，但尚未操作驗收。正式 Pages 已部署 Gemini 對話視窗；最新聊天與今日建議測試均失敗，Console 記錄 `fetch-error` 和 App Check token 的 `403 appCheck/initial-throttle`／`appCheck/throttled`。Firebase Console 註冊的 site key 與程式一致，Google Cloud Fraud Defense 金鑰也列出正式網站網域並顯示受保護；403 原始原因仍待查，也未確認本次請求是否抵達 AI Logic。先前 AI Logic 的過載／逾時 trace 不可直接歸因到本次測試。Gemini 兩項功能仍未驗收通過。XP 程式已存在但待功能驗收。
 
 下一步從 Chrome Network 面板取得 App Check 403 的 response status/message（不分享 Headers、Cookie、Token 或完整 payload）；不要重設已核對相符的 site key／網域，也避免在節流期間反覆重試。節流解除後再各做一次受控 Gemini 測試，對照 AI Logic trace。`script.js` 現在只記錄 SDK 錯誤代碼／名稱，尚未記錄錯誤訊息；必要時再補安全遮蔽後的訊息摘要。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Google Cloud Firebase AI Logic 服務健康](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)。不可分享 Request Headers、Cookie、App Check token 或私人資料。
 

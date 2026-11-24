@@ -9,14 +9,14 @@
 - 專案：日常誌個人行程與任務管理系統（課程 Project A）。
 - Repo：`saIntLin1116/w6-first-site`；正式網址：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)。
 - 專案根目錄：Repo 根目錄（本機工作目錄依使用者電腦設定）。
-- 基準版本為 `1175a73`（`feat: use Firebase AI Logic for Gemini`）。Gemini 對話視窗功能提交 `d0aa88a`（`feat: add Gemini chat window`）已推送至 `main`；GitHub Pages 建置與部署已成功，正式頁已載入該功能的 HTML。今日時間線整合已在本機工作目錄實作，尚未操作驗收或部署。2026-11-25 正式頁 Gemini 測試仍失敗；瀏覽器 Console 顯示 `fetch-error`。
+- 最新提交 `2ded7b3`（`feat: add today calendar timeline`）已推送至 `main`，GitHub Pages 部署狀態成功；正式頁 HTTP 200，HTML 已載入 `today-timeline-20261125-1` 版本。這只確認新版已上線，不代表時間線已做畫面或功能驗收。Gemini 對話視窗提交 `d0aa88a`（`feat: add Gemini chat window`）先前亦已部署。2026-11-25 正式頁 Gemini 測試仍失敗；瀏覽器 Console 顯示 `fetch-error`。
 - 2026-11-25 正式頁單次測試的 Console 另顯示 Firebase App Check token 取得 `403 appCheck/initial-throttle`，其後請求被 `appCheck/throttled` 節流，提示約一天後才可再試。唯讀核對 Firebase Console 後，程式使用的 reCAPTCHA Enterprise site key 與註冊值一致；Google Cloud Fraud Defense 顯示同一網站金鑰屬於網站類型，網域為 `saintlin1116.github.io`，狀態為「受保護」。因此目前未見明顯的金鑰不一致或網域漏列，但原始 403 原因仍未知，也沒有證據證明本次 Gemini 請求抵達模型端。先前 AI Logic 上的 `DEADLINE_EXCEEDED`／`SHEDDABLE` 追蹤仍是較早請求，不能當成本次失敗原因。
 
 ## 專案目標與範圍
 
 提供單一使用者管理個人行程與待辦的網站：前端以 GitHub Pages 發佈，使用 Google 登入和 Firestore 保存各帳號資料；Gemini 第一版採 Firebase AI Logic + Gemini Developer API 免費方案，並由 App Check 保護。主要課程交件方向與功能邊界見 [REQUIREMENTS.md](./REQUIREMENTS.md)。
 
-目前不擴充多人協作、通知或未確認的照片／影片功能。XP 是課程主線完成後的延伸項目。今日時間線採「行事曆單向顯示到今日頁」；程式已在本機工作目錄實作，尚未操作驗收或部署。AI 調整時間仍待定案；Gemini 聊天視窗第一版規格已決定並完成程式，尚待實際呼叫驗收。
+目前不擴充多人協作、通知或未確認的照片／影片功能。XP 是課程主線完成後的延伸項目。今日時間線採「行事曆單向顯示到今日頁」；程式已部署到正式 Pages，畫面和操作驗收待完成。AI 調整時間仍待定案；Gemini 聊天視窗第一版規格已決定並完成程式，尚待實際呼叫驗收。
 
 ## 開發進度與驗收狀態
 
@@ -31,7 +31,7 @@
 | Firestore 個人資料隔離 | Repo 規則限制 `users/{uid}/...` 只能由相同 UID 存取；程式亦以 UID 分開保存。 | 使用者確認不同帳號的行程已分離。對話紀錄另有 Rules Playground 模擬結果：擁有者讀取允許、其他 UID 讀取／更新拒絕、未登入更新拒絕。模擬不等於真實文件操作；雲端目前發布的規則待唯讀確認。 |
 | Gemini 今日規劃 | `script.js` 用 Firebase AI Logic SDK 的 `GoogleAIBackend` 呼叫 Gemini Developer API；App Check 使用 reCAPTCHA Enterprise。Spark 免費路線不使用舊 `functions/index.js`。 | 2026-11-25 正式頁單次測試顯示「目前無法產生建議」，Console 記錄 `Gemini 今日規劃失敗：fetch-error`。同一瀏覽器有 App Check token 取得 `403 appCheck/initial-throttle` 及後續 `appCheck/throttled` 訊息；本次 Gemini 是否抵達 AI Logic 尚待確認。Firebase Console 與 Google Cloud 已唯讀確認註冊 site key、程式 site key 相同，且允許網域列出 `saintlin1116.github.io`；原始 403 原因仍待確認。今日規劃尚未驗收通過。 |
 | XP／等級 | 首次完成待辦加 XP、等級與完成紀錄的程式已存在。 | 使用者操作驗收未完成；不是 W11 第一版必交項目。 |
-| 今日時間線整合當日行程 | 已在本機工作目錄實作今日待辦與今日行事曆行程的唯讀整合；行事曆仍是行程資料唯一來源。待辦區沿用今日排序和預估時長；行程全天列前、固定時間依開始時間、未設定開始時間列後。 | 尚未做本機或手機畫面操作驗收，也未部署；功能寫好不代表已測通。 |
+| 今日時間線整合當日行程 | 已實作並部署至正式 Pages：唯讀整合今日待辦與今日行事曆行程；行事曆仍是行程資料唯一來源。待辦區沿用今日排序和預估時長；行程全天列前、固定時間依開始時間、未設定開始時間列後。 | Pages 部署成功且 HTML 版本標記已核對；尚未做本機、正式網站或手機畫面操作驗收。 |
 | Gemini 對話視窗 | 已加入登入後右下角聊天入口、響應式對話窗、訊息顯示、送出與清除控制；使用 Firebase AI Logic `gemini-3.8-flash`。對話只在頁面記憶體保留，傳送使用者輸入及最近 8 輪對話，不自動附帶 Firestore 任務／行程資料、不寫回 Firestore；登出、切換帳號與重新整理清除。 | 2026-11-25 正式頁登入成功，單次送出通用文字測試後仍顯示失敗提示；Console 記錄 `Gemini 對話失敗：fetch-error`。同一瀏覽器有 App Check token 取得 `403 appCheck/initial-throttle` 及後續節流訊息；site key 與網域已唯讀核對一致，尚未確認 403 根因或本次 Gemini 是否抵達模型端。聊天仍未驗收成功。 |
 | AI 改動今日順序／時間 | 尚未實作或定案。 | 待確認可修改欄位、衝突處理及採用前確認流程。 |
 
@@ -96,7 +96,7 @@ npm install
 
 ## 本次工作紀錄（2026-11-25）
 
-- **本次完成事項：** 重新載入正式 Pages 並檢查 Gemini 錯誤；在本機程式加入今日待辦與行程的時間線顯示，並更新 `README.md`、`REQUIREMENTS.md`。
-- **驗證結果：** Gemini 聊天與今日建議正式頁測試仍顯示失敗；Console 記錄 `fetch-error` 與 App Check token 403／節流。今日時間線程式已寫入本機，但依照本次工作範圍未執行自動化測試或瀏覽器／手機操作驗收，也未部署；`git diff --check` 通過。Firebase 設定、Firestore 資料和規則沒有變更。
+- **本次完成事項：** 加入今日待辦與行事曆行程的時間線顯示，更新 `README.md`、`REQUIREMENTS.md`，提交 `2ded7b3` 並推送 `main`；GitHub Pages 部署成功。
+- **驗證結果：** Pages 部署 API 狀態為 `success`；正式頁回傳 HTTP 200，HTML 包含 `today-timeline-20261125-1` 和「今日時間線」。`git diff --check` 通過。時間線尚未做瀏覽器、手機或操作驗收；Gemini 聊天與今日建議仍失敗，Console 記錄 `fetch-error` 與 App Check token 403／節流。Firebase 設定、Firestore 資料和規則沒有變更。
 - **尚未完成：** 驗收時間線資料排序、空狀態、分類顏色、行程 CRUD 同步與手機版面；Gemini App Check 403 根因與成功呼叫也仍待確認。
-- **下一步工作：** 先在本機預覽並操作驗收今日時間線，修正任何顯示問題；之後取得 App Check 403 回應摘要，節流解除後受控重測 Gemini。尚未 commit、push 或部署。
+- **下一步工作：** 登入正式 Pages 操作驗收今日時間線（待辦／行程顯示、空狀態、行程異動同步及手機版面）；之後取得 App Check 403 回應摘要，節流解除後受控重測 Gemini。
