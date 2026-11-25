@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=planner-ai-fallback-20261125-1">
-  <script type="module" src="script.js?v=planner-ai-fallback-20261125-1"></script>
+  <link rel="stylesheet" href="style.css?v=planner-older-snapshots-20261125-1">
+  <script type="module" src="script.js?v=planner-appcheck-local-debug-20261125-1"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -60,27 +60,48 @@
 
       <section class="workspace-view" id="today-view" aria-labelledby="today-view-title">
         <div class="section-heading page-heading">
-          <div><p class="section-kicker">YOUR DAY</p><div class="today-heading-line"><h2 id="today-view-title">今日要推進的事</h2><time class="today-current-time" id="today-page-clock" aria-label="目前時間"></time></div><time class="today-current-date" id="today-page-date" aria-label="今日日期"></time></div>
+          <div><p class="section-kicker" id="planner-day-kicker">YOUR DAY</p><div class="today-heading-line"><h2 id="today-view-title">今日要推進的事</h2><time class="today-current-time" id="today-page-clock" aria-label="目前時間"></time></div><time class="today-current-date" id="today-page-date" aria-label="今日日期"></time></div>
         </div>
+        <nav class="planner-day-switcher" aria-label="今日頁日期">
+          <button class="planner-day-button" id="planner-yesterday" type="button">昨天</button>
+          <button class="planner-day-button is-selected" id="planner-today" type="button" aria-current="date">今天</button>
+          <button class="planner-day-button" id="planner-tomorrow" type="button">明天</button>
+        </nav>
         <section class="panel today-timeline-panel" aria-labelledby="today-timeline-title">
           <div class="section-heading today-timeline-heading">
             <div>
-              <p class="section-kicker">TODAY TIMELINE</p>
+              <p class="section-kicker" id="planner-timeline-kicker">TODAY TIMELINE</p>
               <h3 id="today-timeline-title">今日時間線</h3>
               <p class="today-timeline-description">拖曳待辦可安排在行程之間；沿用行事曆時間，空檔不足時會提示。</p>
             </div>
-            <div class="today-timeline-counts"><span class="count-pill" id="today-count">0 項待辦</span><span class="count-pill" id="today-schedule-count">0 個行程</span></div>
+            <div class="today-timeline-counts"><span class="count-pill" id="today-count">0 項待辦</span><span class="count-pill" id="today-schedule-count">0 個行程</span><button class="small-button timeline-completed-toggle" id="toggle-completed-timeline" type="button" aria-pressed="true" hidden>隱藏已完成</button></div>
           </div>
           <p class="empty-message" id="today-empty" hidden>今天還沒有待辦，可以從清單加入。</p>
           <p class="empty-message today-event-empty" id="today-event-empty" hidden>今天沒有行事曆行程。</p>
           <ol class="today-timeline-list" id="today-task-list" aria-live="polite"></ol>
+          <details class="older-snapshots-panel" id="older-snapshots-panel" hidden>
+            <summary>查看更早以前的快照</summary>
+            <div class="older-snapshots-content">
+              <p id="older-snapshots-status" role="status">展開後載入已保存的歷史日期。</p>
+              <ul class="older-snapshots-list" id="older-snapshots-list"></ul>
+              <button class="small-button" id="older-snapshots-more" type="button" hidden>載入更早日期</button>
+            </div>
+          </details>
+          <details class="tomorrow-inbox-picker" id="tomorrow-inbox-picker" hidden>
+            <summary id="tomorrow-inbox-summary">從清單加入明日</summary>
+            <div class="tomorrow-inbox-content">
+              <p>選擇要安排到明日時間線的待辦。</p>
+              <ul class="tomorrow-inbox-list" id="tomorrow-inbox-list" aria-live="polite"></ul>
+              <p class="empty-message" id="tomorrow-inbox-empty" hidden>清單目前沒有可加入明日的待辦。</p>
+            </div>
+          </details>
         </section>
-        <section class="panel ai-plan-panel" aria-labelledby="ai-plan-title">
+        <section class="panel ai-plan-panel" id="ai-plan-panel" aria-labelledby="ai-plan-title">
           <div class="section-heading form-heading">
             <div><p class="section-kicker">GEMINI ASSISTANT</p><h3 id="ai-plan-title">今日規劃建議</h3></div>
             <span class="sparkle" aria-hidden="true">✳</span>
           </div>
-          <p class="ai-plan-disclosure">按下按鈕後，會將今日待辦的名稱、狀態、截止日、預估時間、難度，以及今日行程的名稱、時間和類別送到 Google Gemini。備註不會送出。Gemini 會建議待辦順序和行程間的位置；確認後按「採用 AI 建議」才會更新今日時間線，不會改行程時間或把待辦加入行事曆。</p>
+          <p class="ai-plan-disclosure">按下按鈕後，會將所選日期待辦、未安排清單待辦的必要欄位（包含重要度），以及當日行程的名稱、時間和類別送到 Google Gemini。備註不會送出。Gemini 會建議待辦順序、行程間位置，並挑選適合加入該日的清單待辦；確認後按「採用 AI 建議」才會更新。固定行程時間不會變更，待辦不會加入行事曆。</p>
           <button class="small-button is-primary" id="generate-plan-button" type="button" disabled>整理今日安排</button>
           <p class="ai-plan-feedback" id="ai-plan-feedback" role="status" aria-live="polite">載入今日資料後即可產生建議。</p>
           <div class="ai-plan-results" id="ai-plan-results" hidden aria-live="polite">
@@ -110,6 +131,13 @@
         <form class="task-form inbox-form" id="task-form">
           <label class="visually-hidden" for="task-name">任務名稱</label>
           <input id="task-name" name="task-name" type="text" maxlength="120" placeholder="新增一項待辦…" required>
+          <label class="visually-hidden" for="task-importance">重要度</label>
+          <select id="task-importance" name="task-importance" aria-label="待辦重要度">
+            <option value="none" selected>無</option>
+            <option value="high">高重要度</option>
+            <option value="medium">中重要度</option>
+            <option value="low">低重要度</option>
+          </select>
           <button type="submit" class="task-add-button" aria-label="新增至清單">＋</button>
         </form>
         <p class="form-feedback" id="task-feedback" aria-live="polite"></p>
@@ -225,6 +253,7 @@
           <button class="delete-button dialog-close" id="close-edit-dialog" type="button" aria-label="取消編輯">×</button>
         </div>
         <div class="field"><label for="edit-task-name">任務名稱</label><input id="edit-task-name" maxlength="120" required></div>
+        <div class="field"><label for="edit-task-importance">重要度</label><select id="edit-task-importance"><option value="none">無</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select></div>
         <div class="form-row">
           <div class="field"><label for="edit-task-due">截止日期 <span class="optional">選填</span></label><input id="edit-task-due" type="date"></div>
           <div class="field"><label for="edit-task-estimate">預估分鐘 <span class="optional">選填</span></label><input id="edit-task-estimate" type="number" min="1" max="1440" step="1" inputmode="numeric"></div>
