@@ -59,8 +59,8 @@
 ## 待確認事項
 
 1. **AI 如何調整今日順序／時間。** 使用者希望採用建議後可反映到時間線；尚未確認 AI 可以改哪些欄位、如何處理衝突、是否每次都要先預覽和確認。現行安全預設是 AI 只提案，不自動寫入。
-2. **Gemini 對話視窗驗收。** 第一版範圍已決定並完成前端與呼叫程式，詳細資料見下方「Gemini 對話視窗第一版」；正式 Gemini 呼叫仍待驗收。
-3. **Gemini API 與免費路線驗收。** 2026-11-25 Firebase AI Logic 最近兩筆 trace 顯示聊天與今日建議請求已抵達模型端，皆因 `Overloaded prefill queue` 以 `INTERNAL` 失敗；Console 顯示 Gemini Developer API 已啟用、正式 Web App 已註冊並強制 App Check。另見 App Check token `403 appCheck/initial-throttle`，但目前沒有證據它造成模型端過載。本次發佈加入明確過載時一次性使用 `gemini-3.5-flash-lite` 備援，正式頁仍待驗收。私人 AI Studio API Key 不放進網站。
+2. **Gemini 對話視窗驗收。** 正式頁聊天已透過 `gemini-3.5-flash-lite` 備援成功一次；主模型 `gemini-3.8-flash` 的成功仍待確認。詳細資料見下方「Gemini 對話視窗第一版」。
+3. **Gemini API 與免費路線驗收。** 2026-11-25 正式頁聊天與今日建議各成功一次；Firebase AI Logic trace 顯示兩次皆由 `gemini-3.5-flash-lite` 備援模型回覆，延遲約 1.37 秒與 1.25 秒。之前主模型請求發生 `Overloaded prefill queue`／`INTERNAL`，觸發備援。故已驗證正式頁聊天、今日建議與過載備援流程可運作；主模型 `gemini-3.8-flash` 尚無成功 trace。Console 顯示 Gemini Developer API 已啟用、正式 Web App 已註冊並強制 App Check；另見 App Check token `403 appCheck/initial-throttle`，但目前沒有證據它造成模型端過載。私人 AI Studio API Key 不放進網站。
 4. **實際 Pages／Firestore 狀態。** 本次在正式 Pages 觀察到登入後的今日頁仍可顯示，代表該分頁目前登入狀態存在；跨瀏覽器、登出／重新整理完整流程仍待測。Firebase Console 現行 Firestore 規則是否與 Repo 相同，仍待唯讀確認。
 5. **UI 與圖示調研。** 使用者要求比較同類產品、GitHub 專案及常見 UI／圖示做法，再提出改善建議；仍待研究，尚未形成採用決策。
 6. **LINE 登入是否需要。** 課程方向標示可選，沒有要求排入目前版本。
@@ -80,7 +80,7 @@
 - 每次傳送使用者輸入文字及最近 8 輪對話；不自動讀取或附帶待辦、行程、Firestore 資料。若使用者希望 Gemini 參考行程，由使用者自行輸入。
 - 對話只存於目前頁面的記憶體，提供「清除對話」按鈕；登出或重新整理會清除，不寫入 Firestore。
 - Gemini 只提供文字回覆，不會新增、修改或安排待辦與行程。
-- 聊天前端與 Firebase AI Logic 呼叫程式已完成；正式頁追蹤已確認最新聊天請求抵達模型端後因後端過載回 `INTERNAL`。本次發佈加入一次性 Flash-Lite 備援；成功回覆仍待正式頁驗收。App Check token 節流錯誤與模型端失敗的關聯待確認。
+- 聊天前端與 Firebase AI Logic 呼叫程式已完成；正式頁聊天已透過一次性 Flash-Lite 備援成功回覆。主模型成功仍待驗收。App Check token 節流錯誤與模型端過載的關聯待確認。
 
 ## 明確排除或延後
 
@@ -88,4 +88,4 @@
 - 照片分類、影片製作；目前未確認為 APP 交件要求。
 - 外接 Google Calendar 等同步；待主線完成後再評估權限、衝突與資料保存。
 - XP、習慣追蹤、每日／每週回顧等延伸功能，除已存在的 XP 程式外，均不應自動擴寫成 W11 範圍。
-- AI 自動調整今日順序／時間；完成欄位範圍、衝突處理和確認流程前不實作。今日行程單向顯示到今日頁的程式已部署至正式 Pages，尚待畫面驗收。Gemini 聊天視窗不在此排除範圍，依上方第一版規格實作並待驗收。
+- AI 自動調整今日順序／時間；完成欄位範圍、衝突處理和確認流程前不實作。今日行程單向顯示到今日頁的程式已部署至正式 Pages，尚待畫面驗收。Gemini 聊天視窗不在此排除範圍，依上方第一版規格實作；正式頁備援呼叫已成功，主模型成功仍待確認。
