@@ -59,8 +59,10 @@ const appCheck = appCheckSiteKey
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const ai = getAI(firebaseApp, { backend: new GoogleAIBackend() });
-const dailyPlanModel = getGenerativeModel(ai, {
-  model: 'gemini-3.8-flash',
+const primaryGeminiModelName = 'gemini-3.8-flash';
+const fallbackGeminiModelName = 'gemini-3.5-flash-lite';
+const dailyPlanModelConfig = {
+  model: primaryGeminiModelName,
   systemInstruction: [
     '你是繁體中文的個人行程規劃助理。',
     '只根據提供的日期、待辦與行程資料，整理優先順序與簡短建議。',
@@ -94,9 +96,14 @@ const dailyPlanModel = getGenerativeModel(ai, {
     temperature: 0.4,
     maxOutputTokens: 1800,
   },
+};
+const dailyPlanModel = getGenerativeModel(ai, dailyPlanModelConfig);
+const dailyPlanFallbackModel = getGenerativeModel(ai, {
+  ...dailyPlanModelConfig,
+  model: fallbackGeminiModelName,
 });
-const geminiChatModel = getGenerativeModel(ai, {
-  model: 'gemini-3.8-flash',
+const geminiChatModelConfig = {
+  model: primaryGeminiModelName,
   systemInstruction: [
     '你是日常誌中的繁體中文對話助理。',
     '以清楚、友善、精簡的方式回答使用者；除非使用者要求其他語言，否則使用繁體中文。',
@@ -108,6 +115,11 @@ const geminiChatModel = getGenerativeModel(ai, {
     temperature: 0.7,
     maxOutputTokens: 900,
   },
+};
+const geminiChatModel = getGenerativeModel(ai, geminiChatModelConfig);
+const geminiChatFallbackModel = getGenerativeModel(ai, {
+  ...geminiChatModelConfig,
+  model: fallbackGeminiModelName,
 });
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -450,6 +462,12 @@ function updateGeminiChatControls() {
   geminiChatInput.disabled = !currentUser;
   geminiChatSendButton.disabled = !currentUser || geminiChatPending;
   geminiChatClearButton.disabled = geminiChatPending || geminiChatHistory.length === 0;
+}
+
+function isGeminiOverloadError(error) {
+  const message = typeof error?.message === 'string' ? error.message.toLowerCase() : '';
+  return message.includes('overloaded prefill queue')
+    || message.includes('currently experiencing high demand');
 }
 
 function appendGeminiChatMessage(role, message) {
@@ -1972,9 +1990,19 @@ geminiChatForm.addEventListener('submit', async (event) => {
   geminiChatSendButton.textContent = '回覆中…';
   updateGeminiChatControls();
 
+  let fallbackAttempted = false;
   try {
-    const chat = geminiChatModel.startChat({ history: geminiChatHistory });
-    const result = await chat.sendMessage(message);
+    let result;
+    try {
+      const chat = geminiChatModel.startChat({ history: geminiChatHistory });
+      result = await chat.sendMessage(message);
+    } catch (primaryError) {
+      if (!isGeminiOverloadError(primaryError)) throw primaryError;
+      fallbackAttempted = true;
+      geminiChatStatus.textContent = '主要模型目前需求量較高，正在嘗試快速備援模型…';
+      const fallbackChat = geminiChatFallbackModel.startChat({ history: geminiChatHistory });
+      result = await fallbackChat.sendMessage(message);
+    }
     if (requestId !== geminiChatRequestId || currentUser?.uid !== requestedByUid) return;
     const answer = result.response.text().trim();
     if (!answer) throw new Error('Gemini returned an empty response.');
@@ -1988,10 +2016,16 @@ geminiChatForm.addEventListener('submit', async (event) => {
     geminiChatInput.value = '';
     geminiChatStatus.textContent = '回覆完成。';
   } catch (error) {
-    console.error('Gemini 對話失敗：', error.code || error.name || 'unknown');
+    console.warn('Gemini 對話失敗：', {
+      code: error.code || error.name || 'unknown',
+      fallbackAttempted,
+      overloaded: isGeminiOverloadError(error),
+    });
     if (requestId !== geminiChatRequestId || currentUser?.uid !== requestedByUid) return;
     userMessage.remove();
-    geminiChatStatus.textContent = 'Gemini 目前無法回覆，訊息已留在輸入框；稍後可再試。';
+    geminiChatStatus.textContent = fallbackAttempted && isGeminiOverloadError(error)
+      ? 'Gemini 主要與備援模型目前都很忙，訊息仍留在輸入框；請稍後再試。'
+      : 'Gemini 目前無法回覆，訊息已留在輸入框；稍後可再試。';
     geminiChatInput.focus();
   } finally {
     if (requestId === geminiChatRequestId) {
@@ -2038,21 +2072,37 @@ generatePlanButton.addEventListener('click', async () => {
   updateAiPlanButton();
   aiPlanFeedback.textContent = 'Gemini 正在整理今天的待辦與行程…';
   aiPlanResults.hidden = true;
+  const planInput = JSON.stringify({
+    date: today,
+    timeZone: 'Asia/Taipei',
+    tasks: dailyTasks,
+    events: dailyEvents,
+  });
+  let fallbackAttempted = false;
   try {
-    const result = await dailyPlanModel.generateContent(JSON.stringify({
-      date: today,
-      timeZone: 'Asia/Taipei',
-      tasks: dailyTasks,
-      events: dailyEvents,
-    }));
+    let result;
+    try {
+      result = await dailyPlanModel.generateContent(planInput);
+    } catch (primaryError) {
+      if (!isGeminiOverloadError(primaryError)) throw primaryError;
+      fallbackAttempted = true;
+      aiPlanFeedback.textContent = '主要模型目前需求量較高，正在嘗試快速備援模型…';
+      result = await dailyPlanFallbackModel.generateContent(planInput);
+    }
     if (requestId !== aiPlanRequestId || currentUser?.uid !== requestedByUid) return;
     const plan = JSON.parse(result.response.text());
     renderAiPlan(plan, taskLookup);
     aiPlanFeedback.textContent = '建議已產生，請依照實際狀況調整。';
   } catch (error) {
-    console.error('Gemini 今日規劃失敗：', error.code || error.name || 'unknown');
+    console.warn('Gemini 今日規劃失敗：', {
+      code: error.code || error.name || 'unknown',
+      fallbackAttempted,
+      overloaded: isGeminiOverloadError(error),
+    });
     if (requestId !== aiPlanRequestId || currentUser?.uid !== requestedByUid) return;
-    aiPlanFeedback.textContent = '目前無法產生建議。請確認 Firebase AI Logic 與 App Check 已設定，或稍後再試。';
+    aiPlanFeedback.textContent = fallbackAttempted && isGeminiOverloadError(error)
+      ? 'Gemini 主要與備援模型目前都很忙，請稍後再試。'
+      : '目前無法產生建議。請確認 Firebase AI Logic 與 App Check 已設定，或稍後再試。';
   } finally {
     if (requestId === aiPlanRequestId) {
       aiPlanPending = false;

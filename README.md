@@ -66,9 +66,9 @@
 
 ## 驗收進度
 
-截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。新增與管理流程、手機時間線排版已修正；管理畫面也允許替五個預設類別改色或刪除，預設類別刪除採軟刪除，並把既有行程轉到仍啟用的備援類別。這些功能尚未逐項操作驗收；最新程式版本與提交紀錄請見上方 `main` 分支連結。Gemini 聊天與今日建議測試均失敗，Console 記錄 `fetch-error` 和 App Check token 的 `403 appCheck/initial-throttle`／`appCheck/throttled`；403 原始原因仍待查，也未確認本次請求是否抵達 AI Logic。Gemini 兩項功能仍未驗收通過。
+截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。新增與管理流程、手機時間線排版已修正；管理畫面也允許替五個預設類別改色或刪除，預設類別刪除採軟刪除，並把既有行程轉到仍啟用的備援類別。這些功能尚未逐項操作驗收；最新程式版本與提交紀錄請見上方 `main` 分支連結。Firebase AI Logic 監控已確認聊天與今日建議請求確實抵達模型端，最近兩筆失敗皆為後端 `Overloaded prefill queue`（模型需求量過高），不是請求未連線。正式 Web App 已註冊並強制 App Check；另曾看到 `403 appCheck/initial-throttle`／`appCheck/throttled`，目前沒有證據顯示它造成這兩筆模型過載。本次發佈加入過載時一次性改用 `gemini-3.5-flash-lite` 備援；正式頁尚待聊天與今日建議的實際驗收。詳細追蹤與下一步見 [HANDOFF.md](./HANDOFF.md)。
 
-下一步從 Chrome Network 面板取得 App Check 403 的 response status/message（不分享 Headers、Cookie、Token 或完整 payload）；不要重設已核對相符的 site key／網域，也避免在節流期間反覆重試。節流解除後再各做一次受控 Gemini 測試，對照 AI Logic trace。`script.js` 現在只記錄 SDK 錯誤代碼／名稱，尚未記錄錯誤訊息；必要時再補安全遮蔽後的訊息摘要。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Google Cloud Firebase AI Logic 服務健康](https://status.cloud.google.com/products/xSLTSirYjsylAlwIqpBP/history)。不可分享 Request Headers、Cookie、App Check token 或私人資料。
+目前已從 AI Logic trace 取得直接錯誤原因；本次發佈已加入一次性備援。確認 Pages 部署完成後，於正式頁各做一次聊天與今日建議測試並核對 trace。不要重設已核對的 Console 設定，也不要分享 Request Headers、Cookie、App Check token 或私人資料。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Firebase AI Logic 支援模型](https://firebase.google.com/docs/ai-logic/models)。
 
 接下來的 Gemini 錯誤排查步驟、Rules Playground 模擬與實際測試的差異，以及其他待辦，請以[開發交接文件](./HANDOFF.md)為準。
 
