@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=planner-ui-20261125-10">
+  <link rel="stylesheet" href="style.css?v=planner-ai-fallback-20261125-1">
   <script type="module" src="script.js?v=planner-ai-fallback-20261125-1"></script>
 </head>
 <body>
@@ -38,6 +38,7 @@
 
     <div class="app-content" id="dashboard-grid" hidden>
       <section class="xp-card" aria-labelledby="xp-title">
+        <span class="xp-card-gauge" aria-hidden="true"></span>
         <div class="xp-card-heading">
           <div><p class="section-kicker">YOUR PROGRESS</p><h3 id="xp-title">LV <span id="xp-level">1</span></h3></div>
           <strong class="xp-total" id="xp-total">0 XP</strong>
@@ -79,7 +80,7 @@
             <div><p class="section-kicker">GEMINI ASSISTANT</p><h3 id="ai-plan-title">今日規劃建議</h3></div>
             <span class="sparkle" aria-hidden="true">✳</span>
           </div>
-          <p class="ai-plan-disclosure">按下按鈕後，會將今日待辦的名稱、狀態、截止日、預估時間、難度，以及今日行程的名稱、時間和類別送到 Google Gemini。備註不會送出；建議只供參考，不會自動修改或保存。</p>
+          <p class="ai-plan-disclosure">按下按鈕後，會將今日待辦的名稱、狀態、截止日、預估時間、難度，以及今日行程的名稱、時間和類別送到 Google Gemini。備註不會送出。Gemini 會建議待辦順序和行程間的位置；確認後按「採用 AI 建議」才會更新今日時間線，不會改行程時間或把待辦加入行事曆。</p>
           <button class="small-button is-primary" id="generate-plan-button" type="button" disabled>整理今日安排</button>
           <p class="ai-plan-feedback" id="ai-plan-feedback" role="status" aria-live="polite">載入今日資料後即可產生建議。</p>
           <div class="ai-plan-results" id="ai-plan-results" hidden aria-live="polite">
@@ -88,6 +89,8 @@
             <ol class="ai-plan-priorities" id="ai-plan-priorities"></ol>
             <h4>今日安排小提醒</h4>
             <ul class="ai-plan-suggestions" id="ai-plan-suggestions"></ul>
+            <p class="ai-plan-apply-hint">採用後只保存待辦在今日時間線中的順序與行程間位置；待辦預估時長不變，空檔不足仍會顯示提醒。</p>
+            <button class="small-button is-primary ai-plan-apply-button" id="adopt-ai-plan-button" type="button" hidden disabled>採用 AI 建議</button>
           </div>
         </section>
         <details class="completed-panel">

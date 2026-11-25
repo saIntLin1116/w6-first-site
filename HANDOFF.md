@@ -32,7 +32,7 @@
 | 月曆、行程、分類 | 已有行程 CRUD、分類顏色、每日行程列表與月曆色點程式；日期顯示使用台北時區。 | 逐項 CRUD、重新載入保存、手機版顯示的測試結果未完整記錄；本次未測。 |
 | 今日日期時鐘、表單配色與結束時間預設 | 今日頁在標題後同一行顯示不換行的亮色目前時間，台北日期置於標題下方且不加「今天是」前綴；全天勾選框和時間按鈕套用色票；結束時間空白時程式預設開始後一小時。23:00 起不支援跨午夜，須手動輸入結束時間。 | 已推送並部署；尚未操作驗收或檢查視覺效果。 |
 | Firestore 個人資料隔離 | Repo 規則限制 `users/{uid}/...` 只能由相同 UID 存取；程式亦以 UID 分開保存。 | 使用者確認不同帳號的行程已分離。對話紀錄另有 Rules Playground 模擬結果：擁有者讀取允許、其他 UID 讀取／更新拒絕、未登入更新拒絕。模擬不等於真實文件操作；雲端目前發布的規則待唯讀確認。 |
-| Gemini 今日規劃 | `script.js` 用 Firebase AI Logic SDK 的 `GoogleAIBackend` 呼叫 Gemini Developer API；App Check 使用 reCAPTCHA Enterprise。Spark 免費路線不使用舊 `functions/index.js`。主模型為 `gemini-3.8-flash`；明確過載時最多切換一次 `gemini-3.5-flash-lite`。 | 正式頁今日規劃已成功一次，AI Logic trace 顯示備援模型 `gemini-3.5-flash-lite` 成功，約 1.25 秒，輸出含摘要、優先順序及建議。此前主模型請求曾因 `Overloaded prefill queue` 失敗；尚無主模型成功紀錄。 |
+| Gemini 今日規劃與採用 | `script.js` 用 Firebase AI Logic SDK 的 `GoogleAIBackend` 呼叫 Gemini Developer API；App Check 使用 reCAPTCHA Enterprise。主模型為 `gemini-3.8-flash`；明確過載時最多切換一次 `gemini-3.5-flash-lite`。本機版本新增每個待辦的 `afterEventId` 插入點和「採用 AI 建議」按鈕；確認後只更新待辦 `todayOrder`、`timelineAfterEventId`、`timelineOrder`，不改行程、估時或建立待辦開始時間。 | 正式頁既有今日規劃曾透過備援成功一次；新增的插入點與採用寫入流程尚未測試，尚未部署。主模型成功仍待觀察。 |
 | XP／等級 | XP 卡移到主要頁籤上方，標示 `LV`。參考資料夾內紅色 HUD、深色遊戲選單斜角框、青藍標籤與圓形儀表圖，採深色半透明玻璃、紅色細線、克制的藍灰儀表刻度、等寬字體與微光進度條；中文字沿用系統字體。 | localhost 截圖已確認目前更深、更透明的樣式可見，正式 Pages 仍是 `c1225e5` 原卡片樣式；本機樣式待使用者確認，未推送。XP 功能本身尚未操作驗收，且非 W11 第一版必交項目。 |
 | 今日時間線整合當日行程 | 已改成統一清單：可把待辦拖曳到行程前後或兩個行程間；保存任務相對於行程的位置。若兩側行程時間完整且待辦預估總時長超過間隔，顯示警告。 | 已包含在目前 `main`／Pages 版本中，但拖曳保存、空檔警告和手機操作仍待完整驗收。 |
 | 行程類別選擇與管理 | 新增按鈕改以表單建立類別。自訂類別可改名、改色及刪除；預設類別「課業、工作、生活、社交、其他」可改色或刪除但不可改名。預設類別以帳號內軟刪除標記停用；刪除類別時相關行程保留並轉到仍啟用的備援類別，優先「其他」，若其已刪除則使用其他仍啟用類別。選單本體與選項設定為浮動色 `#DED8DA`。 | 已在 `c1225e5` 推送並部署。功能、顏色保存、預設類別軟刪除、相關行程轉類別仍待操作驗收。 |
@@ -50,6 +50,7 @@
 - 使用者先前曾在終端機回報 `npm`、`firebase` 指令不存在；2026-11-24 已在自己的終端機確認 Node `v26.13.1`、npm `11.20.0`、Firebase CLI `15.37.0` 可執行。Repo 的 Functions runtime 設定為 Node 20；本機 Node 版本與部署 runtime 不同，後續若安裝或部署出現 engine 警告需核對。
 - 使用者提供的最新狀態：Firebase 專案為 Spark；Firebase AI Logic Gemini Developer API 已設定；`script.js` 使用的 Web App ID 對應第一筆 `Project A Web`。專案另有一筆同名但 ID 不同的 Web App。App Check 專頁及 AI Logic 概覽均顯示第一筆已註冊 Fraud Defense 且已強制執行，第二筆未註冊；因此目前正式頁使用的 App ID 對應受保護的 App。使用者回報重播保護關閉、先前 2 個 App Check 要求驗證通過。此 Spark 路線不需 AI Studio API Key、Cloud Functions Secret 或 Functions 部署。
 - Firebase 官方支援模型清單將 `gemini-3.8-flash` 列為穩定模型；目前沒有證據把它判定為失敗原因。
+- 本機新增的採用 AI 建議按鈕會在正式使用者點擊後以 Firestore batch 儲存待辦時間線位置；套用前以當日待辦／行程快照防止過期建議覆蓋新資料。部署前需操作驗收一般建議、空檔溢出提示、當日資料變更後要求重產生，以及登出／切帳號的狀態清理。
 - 2026-11-25 已唯讀核對：Firebase AI Logic Gemini Developer API 已啟用；正式 App Check 已註冊並強制；AI monitoring 已啟用。正式頁聊天與今日規劃已各成功一次，trace 均顯示備援模型 `gemini-3.5-flash-lite`；其前的失敗 trace 指向模型端 `Overloaded prefill queue`。這已驗證目前備援流程可運作，但未驗證主模型 `gemini-3.8-flash` 成功。App Check token `403 appCheck/initial-throttle`／`appCheck/throttled` 是另見錯誤，沒有證據將其視為模型過載的根因。Cloud Browser key 的 API 限制清單包含 Firebase AI Logic 與 Firebase App Check；目前未改金鑰限制。
 - 正式頁測試已確認 Gemini 3.5 Flash-Lite 備援成功；主模型及其恢復後的成功情況仍待觀察。Google 官方模型文件列出 Flash-Lite 為免費穩定的一般模型，並支援結構化輸出。
 - 今日時間線現在以待辦文件保存 `timelineAfterEventId`、`timelineOrder`、`todayOrder`，不為待辦編造開始時間；行程仍是行事曆唯一來源。舊有未加這些欄位的待辦會沿用 `todayOrder`，預設放在第一筆行程前。
@@ -101,13 +102,18 @@ npm install
 
 ## 建議下一步（依優先順序）
 
-1. **確認本機 XP 卡片 HUD／玻璃樣式是否採用。** 預覽網址 `http://localhost:8000/`；若接受再決定是否推送這個樣式。之後用專用測試類別／行程驗收類別管理；刪除類別會寫入登入者的 Firestore 類別／行程文件。
-2. **驗收 Pages 新版 UI／時間線。** 確認 XP 卡位於頁籤上方；待辦可拖曳到兩個行程間並於重新整理後保留順序；空檔超時警告正確；檢查完成復原、空狀態與手機觸控拖曳。
+1. **本機驗收採用 AI 建議。** 檢查 `script.js` 的建議驗證／Firestore 寫入和 `index.html` 的按鈕；使用一般待辦與有時間行程確認建議順序／插入點，採用後重新整理仍保留；檢查空檔超時提醒及建議後資料變更時拒絕舊結果。此功能目前尚未測試、commit、push 或部署。
+2. **確認本機 XP 卡片 HUD／玻璃樣式是否採用。** 預覽網址 `http://localhost:8000/`；若接受再決定是否推送這個樣式。之後用專用測試類別／行程驗收類別管理；刪除類別會寫入登入者的 Firestore 類別／行程文件。
 3. **驗收重複行程與時間輸入。** 測試每週及自訂天／週／月頻率、結束日含當日行為、366 筆上限、單次編輯／刪除，以及 `13`、`0930` 和滾動選擇器。
 4. **Gemini 主模型追蹤。** 聊天與今日建議已在正式頁透過 `gemini-3.5-flash-lite` 備援各成功一次。後續可在模型負載恢復時各測一次，確認 `gemini-3.8-flash` 是否成功；若又過載，應避免連續重送，直接查看 AI Logic trace。不要重設已核對的 Console 設定，也不要分享 Headers、Cookie、App Check Token 或完整請求內容。
 5. **完成 W11 交件驗收與使用者測試。** 確認 Google 登入、Firestore 個人隔離、待辦／行程／分類和 AI 的實際結果，記錄真實操作；再核對老師表單要求與 Pages 正式版本。LINE 登入仍是可選項。
 
 ## 本次工作紀錄（2026-11-25）
+
+- **本次完成事項：** 新增今日規劃的 AI 採用流程：Gemini 為每筆今日待辦指定建議順序與行程間錨點；使用者按「採用 AI 建議」後才保存三個時間線位置欄位，沿用既有空檔超時提示。更新今日規劃說明、輸出 schema、有效建議快照檢查與介面文案；未提交既有 LV 樣式修改。
+- **驗證結果：** 尚未執行功能測試或瀏覽器操作；需本機確認建議格式、採用後排序保存、空檔不足提醒及資料變更後拒絕舊建議。原有聊天／規劃的備援模型正式追蹤成功仍是先前驗收結果。
+- **尚未完成：** 新功能只在本機程式，未 commit、push 或部署；未確認 Gemini 在實際行程資料下都能輸出完整有效的任務順序與 `afterEventId`。
+- **下一步工作：** 先在本機以一般資料登入驗收採用流程，再決定是否提交、推送與部署。不可用未確認或測試資料直接覆蓋真實今日安排。
 
 - **本次完成事項：** 唯讀查看 Firebase AI Logic 正式追蹤與 Repo 模型設定；確認聊天與今日規劃各成功一次，兩筆成功都由 `gemini-3.5-flash-lite` 備援處理。記錄先前失敗與模型過載的關係；未修改 Firebase Console 或程式碼。更新本文件、README 與 REQUIREMENTS 的驗收狀態。
 - **驗證結果：** 聊天 trace 狀態成功、回覆延遲約 1.37 秒；今日規劃 trace 狀態成功、回覆延遲約 1.25 秒，輸出有摘要、優先順序及建議。兩筆 trace 的實際模型都是 `gemini-3.5-flash-lite`，因此備援路徑已正式驗收；`gemini-3.8-flash` 主模型仍未驗收成功。
