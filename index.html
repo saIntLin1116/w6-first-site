@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#181D26">
   <title>日常誌｜個人行程與任務管理</title>
-  <link rel="stylesheet" href="style.css?v=planner-older-snapshots-20261125-1">
-  <script type="module" src="script.js?v=planner-appcheck-local-debug-20261125-1"></script>
+  <link rel="stylesheet" href="style.css?v=planner-disclosure-info-icon-20261126-2">
+  <script type="module" src="script.js?v=planner-disclosure-info-icon-20261126-2"></script>
 </head>
 <body>
   <main class="page-shell">
@@ -53,9 +53,9 @@
         </details>
       </section>
       <nav class="main-nav" aria-label="主要頁面">
-        <button class="nav-button" type="button" data-view="inbox" aria-pressed="false">清單 <span id="inbox-nav-count">0</span></button>
-        <button class="nav-button is-active" type="button" data-view="today" aria-pressed="true">今日</button>
-        <button class="nav-button" type="button" data-view="calendar" aria-pressed="false">行事曆</button>
+        <button class="nav-button" type="button" data-view="inbox" aria-pressed="false"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20"><path d="M5 3.5h10a1.5 1.5 0 0 1 1.5 1.5v11.5H3.5V5A1.5 1.5 0 0 1 5 3.5Z"/><path d="M7 7h6M7 10h6M7 13h4"/></svg><span class="nav-label">清單</span><span id="inbox-nav-count">0</span></button>
+        <button class="nav-button is-active" type="button" data-view="today" aria-pressed="true"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.7 1.8"/></svg><span class="nav-label">今日</span></button>
+        <button class="nav-button" type="button" data-view="calendar" aria-pressed="false"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20"><rect x="3" y="4.5" width="14" height="12" rx="2"/><path d="M6.5 3v3M13.5 3v3M3.5 8h13M7 11h.01M10 11h.01M13 11h.01M7 14h.01M10 14h.01"/></svg><span class="nav-label">行事曆</span></button>
       </nav>
 
       <section class="workspace-view" id="today-view" aria-labelledby="today-view-title">
@@ -101,7 +101,10 @@
             <div><p class="section-kicker">GEMINI ASSISTANT</p><h3 id="ai-plan-title">今日規劃建議</h3></div>
             <span class="sparkle" aria-hidden="true">✳</span>
           </div>
-          <p class="ai-plan-disclosure">按下按鈕後，會將所選日期待辦、未安排清單待辦的必要欄位（包含重要度），以及當日行程的名稱、時間和類別送到 Google Gemini。備註不會送出。Gemini 會建議待辦順序、行程間位置，並挑選適合加入該日的清單待辦；確認後按「採用 AI 建議」才會更新。固定行程時間不會變更，待辦不會加入行事曆。</p>
+          <details class="ai-plan-disclosure">
+            <summary>Gemini 使用資料與建議範圍</summary>
+            <p>按下按鈕後，會將所選日期待辦、未安排清單待辦的必要欄位（包含重要度），以及當日行程的名稱、時間和類別送到 Google Gemini。備註不會送出。Gemini 會建議待辦順序、行程間位置，並挑選適合加入該日的清單待辦；確認後按「採用 AI 建議」才會更新。固定行程時間不會變更，待辦不會加入行事曆。</p>
+          </details>
           <button class="small-button is-primary" id="generate-plan-button" type="button" disabled>整理今日安排</button>
           <p class="ai-plan-feedback" id="ai-plan-feedback" role="status" aria-live="polite">載入今日資料後即可產生建議。</p>
           <div class="ai-plan-results" id="ai-plan-results" hidden aria-live="polite">

@@ -5,6 +5,7 @@
 - 正式網站：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)
 - GitHub Repo：[`saIntLin1116/w6-first-site`](https://github.com/saIntLin1116/w6-first-site)
 - [查看 main 分支的提交紀錄](https://github.com/saIntLin1116/w6-first-site/commits/main)
+- [查看本次更新前保留的配色版本（alternate-color 分支）](https://github.com/saIntLin1116/w6-first-site/tree/alternate-color)
 - [開發交接與目前待辦](./HANDOFF.md)｜[需求與尚待確認事項](./REQUIREMENTS.md)
 
 ## 目前功能

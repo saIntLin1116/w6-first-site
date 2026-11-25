@@ -1240,6 +1240,7 @@ function renderTomorrowInboxPicker() {
   tomorrowInboxList.replaceChildren(...availableTasks.map((task) => {
     const row = document.createElement('li');
     row.className = 'tomorrow-inbox-item';
+    row.dataset.id = task.id;
     const copy = document.createElement('div');
     copy.className = 'task-copy';
     const title = document.createElement('strong');
@@ -1444,21 +1445,27 @@ function createTodayEventRow(item) {
 
   const copy = document.createElement('div');
   copy.className = 'today-event-copy';
+  const heading = document.createElement('div');
+  heading.className = 'today-event-heading';
   const title = document.createElement('h5');
   title.textContent = item.name;
-  copy.append(title);
+  const connector = document.createElement('span');
+  connector.className = 'today-event-connector';
+  connector.setAttribute('aria-hidden', 'true');
+  const tag = document.createElement('span');
+  tag.className = `event-tag tag-${item.style || 'other'}`;
+  tag.style.backgroundColor = color;
+  tag.style.color = categoryTextColor(color);
+  tag.textContent = item.category || '行程';
+  heading.append(title, connector, tag);
+  copy.append(heading);
   if (item.note) {
     const note = document.createElement('p');
     note.textContent = item.note;
     copy.append(note);
   }
 
-  const tag = document.createElement('span');
-  tag.className = `event-tag tag-${item.style || 'other'}`;
-  tag.style.backgroundColor = color;
-  tag.style.color = categoryTextColor(color);
-  tag.textContent = item.category || '行程';
-  row.append(track, copy, tag);
+  row.append(track, copy);
   return row;
 }
 
@@ -2059,8 +2066,11 @@ function renderSchedules() {
     row.dataset.id = item.id;
     const time = document.createElement('time');
     time.textContent = eventTimeLabel(item);
+    const track = document.createElement('div');
+    track.className = 'schedule-track';
     const dot = document.createElement('span');
     dot.className = 'timeline-dot';
+    track.append(dot);
     const categoryColor = eventCategoryColor(item.category);
     row.style.setProperty('--category-color', categoryColor);
     const copy = document.createElement('div');
@@ -2088,8 +2098,8 @@ function renderSchedules() {
     remove.dataset.action = 'delete-schedule';
     remove.textContent = '刪除';
     remove.setAttribute('aria-label', `刪除行程：${item.name}`);
-    actions.append(edit, remove);
-    row.append(time, dot, copy, tag, actions);
+    actions.append(tag, edit, remove);
+    row.append(time, track, copy, actions);
     if (index < selectedEvents.length - 1) row.classList.add('has-following');
     scheduleList.append(row);
   });
@@ -2756,7 +2766,7 @@ async function handleTaskAction(event) {
     }
     return;
   }
-  const row = button.closest('.task-item');
+  const row = button.closest('.task-item, .tomorrow-inbox-item');
   const task = tasks.find((item) => item.id === row?.dataset.id);
   if (!task) return;
 
