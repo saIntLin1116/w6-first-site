@@ -49,7 +49,7 @@
 - 透過 Firebase AI Logic 的 Gemini Developer API 及 App Check 呼叫 Gemini；私人 Gemini API Key 不放入前端或 Repo。
 - 主模型為 `gemini-3.8-flash`；若錯誤明確指出模型過載，最多改用一次 `gemini-3.5-flash-lite` 備援。可用模型及請求量仍受 Google 配額限制。
 - 正式 Pages 已透過備援模型成功完成今日規劃；主模型成功仍待確認。App Check 已註冊並強制基本驗證。
-- 本機開發版已加入 AI 建議位置預覽與「採用 AI 建議」操作；採用前會檢查今日資料是否已變更，採用後仍會顯示空檔不足警告。此改動尚未測試或部署。
+- 已部署 AI 建議位置預覽與「採用 AI 建議」操作；採用前會檢查今日資料是否已變更，採用後仍會顯示空檔不足警告。此流程尚未完成正式頁操作驗收。
 - 已新增登入後顯示的 Gemini 對話視窗，使用同一 Firebase AI Logic 後端。聊天只傳送使用者輸入的文字與最近 8 輪對話，不會自動附帶待辦／行程，也不寫入 Firestore；登出或重新整理會清除。
 - 聊天視窗已隨 `d0aa88a` 部署到正式 Pages。2026-11-25 正式頁聊天測試透過 `gemini-3.5-flash-lite` 備援模型成功回覆；主模型 `gemini-3.8-flash` 成功仍待確認。
 
@@ -69,7 +69,7 @@
 
 截至 2026-11-25，使用者回報不同帳號的行程已分離，並在手機登入修正推送後回報登入成功；核心功能的完整逐項驗收仍待補。新增與管理流程、手機時間線排版已修正；管理畫面也允許替五個預設類別改色或刪除，預設類別刪除採軟刪除，並把既有行程轉到仍啟用的備援類別。這些功能尚未逐項操作驗收；最新程式版本與提交紀錄請見上方 `main` 分支連結。Firebase AI Logic 正式追蹤已驗證 Gemini 聊天及今日建議各成功一次：兩者都因主模型 `gemini-3.8-flash` 過載而改用 `gemini-3.5-flash-lite` 備援成功；今日建議產生摘要、待辦優先順序及建議。故備援流程已驗收，主模型成功仍待確認。正式 Web App 已註冊並強制 App Check；另曾看到 `403 appCheck/initial-throttle`／`appCheck/throttled`，目前沒有證據顯示它造成模型過載。詳細追蹤與下一步見 [HANDOFF.md](./HANDOFF.md)。
 
-正式頁聊天與今日建議已各透過一次性備援成功；新加入的「採用 AI 建議」流程仍在本機，尚待操作驗收後再部署。後續待模型負載穩定時觀察主模型是否成功。不要重設已核對的 Console 設定，也不要分享 Request Headers、Cookie、App Check token 或私人資料。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Firebase AI Logic 支援模型](https://firebase.google.com/docs/ai-logic/models)。
+正式頁聊天與今日建議已各透過一次性備援成功；「採用 AI 建議」已部署但尚待操作驗收。後續待模型負載穩定時觀察主模型是否成功。不要重設已核對的 Console 設定，也不要分享 Request Headers、Cookie、App Check token 或私人資料。官方參考：[Firebase AI Logic 錯誤排查](https://firebase.google.com/docs/ai-logic/error-codes)、[Firebase AI Logic 支援模型](https://firebase.google.com/docs/ai-logic/models)。
 
 接下來的 Gemini 錯誤排查步驟、Rules Playground 模擬與實際測試的差異，以及其他待辦，請以[開發交接文件](./HANDOFF.md)為準。
 
