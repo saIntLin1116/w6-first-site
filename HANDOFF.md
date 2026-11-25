@@ -9,7 +9,7 @@
 - 專案：日常誌個人行程與任務管理系統（課程 Project A）。
 - Repo：`saIntLin1116/w6-first-site`；正式網址：[GitHub Pages](https://saintlin1116.github.io/w6-first-site/)。
 - 專案根目錄：Repo 根目錄（本機工作目錄依使用者電腦設定）。
-- GitHub Pages 由 `main` 分支根目錄發布；目前 `main`／`origin/main` 為 `6cd056d`（`feat: refine planner dark HUD interface`），Pages 已部署成功。本次更新前版本保留於 `alternate-color` 分支（`f00a1a2`）；README 有直接連結。該分支保留原始程式版本，沒有另外發布成 Pages 網站。
+- GitHub Pages 由 `main` 分支根目錄發布；深色介面程式版本 `6cd056d`（`feat: refine planner dark HUD interface`）已部署成功，後續僅有交接文件更新提交。本次更新前版本保留於 `alternate-color` 分支（`f00a1a2`）；README 有直接連結。該分支保留原始程式版本，沒有另外發布成 Pages 網站。
 - 2026-11-25 登入 Firebase Console 後唯讀檢查：正式 Web App 在 AI Logic 頁顯示 App Check「已註冊（已強制執行）」；Gemini Developer API 已啟用，AI monitoring 已啟用。
 - 2026-11-25 下午約 4:34–4:35（台北時間）正式頁受控測試後，聊天與今日規劃各有一筆失敗和一筆成功。失敗追蹤皆為 `INTERNAL`，對應先前確認的 `Overloaded prefill queue`；其後成功追蹤的實際模型都顯示 `gemini-3.5-flash-lite`：聊天回覆約 1.37 秒，今日規劃回覆約 1.25 秒。今日規劃回傳摘要、待辦優先順序及建議。這證實正式頁在模型過載後能切換備援，且兩項功能都成功取得並呈現結果；目前尚未觀察到主模型 `gemini-3.8-flash` 成功，不能把備援成功當成主模型已驗收。最近 24 小時監控約 11 次要求、成功率 18.2%，包含先前失敗，不能代表最新兩次受控測試仍失敗。先前 `403 appCheck/initial-throttle`／`appCheck/throttled` 是另外觀察到的 App Check token 錯誤，目前沒有證據顯示它造成模型端過載。未改 Firebase Console 設定。
 - `script.js` 在明確模型過載時最多改用一次 `gemini-3.5-flash-lite` 備援，聊天與今日建議皆適用。本次正式測試已命中備援並成功；主模型仍待觀察。
